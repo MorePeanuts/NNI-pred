@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+.claude
+
+# datasets
+datasets/
+
+temp-py/
+**/.DS_Store
