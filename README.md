@@ -29,8 +29,8 @@ This project develops machine learning models to predict neonicotinoid insectici
 
 ### 📊 Key Reports Generated
 
-- **[Stage 1 Correlation Analysis Report](docs/stage1_correlation_analysis.md)**
-- **[Stage 1 Spatiotemporal Analysis Report](docs/stage1_spatiotemporal_analysis.md)**
+- **[Stage 1 Correlation Analysis Report](docs/stage1_correlation_analysis_report.md)**
+- **[Stage 1 Spatiotemporal Analysis Report](docs/stage1_spatiotemporal_analysis_report.md)**
 - **[Stage 1 Summary Report](docs/stage1_summary_report.md)**
 
 ## Data Overview
@@ -96,6 +96,11 @@ NNI-pred/
 └── temp-py/              # Temporary scripts
 ```
 
+## Requirements
+
+- Python 3.12+
+- `uv` package manager
+
 ## Quick Start
 
 ```bash
@@ -132,18 +137,3 @@ uv run scripts/spatiotemporal_analysis.py
 ---
 
 **Project Status**: Ready for Stage 2 implementation with solid analytical foundation.
-
-## Requirements
-
-- Python 3.12+
-- `uv` package manager
-
-## Quick Start
-
-```bash
-# Install dependencies
-uv sync
-
-# Run exploratory analysis
-uv run scripts/explore_data.py
-```
