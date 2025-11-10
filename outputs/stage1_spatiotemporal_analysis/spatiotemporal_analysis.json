@@ -1,0 +1,990 @@
+{
+  "geographic_stats": {
+    "soil": {
+      "total_samples": 186,
+      "lon_range": [
+        112.0780029,
+        116.4449997
+      ],
+      "lat_range": [
+        32.6040001,
+        34.8721008
+      ],
+      "lon_center": 114.09035504032258,
+      "lat_center": 33.77016793709678,
+      "lon_std": 1.1021134159766466,
+      "lat_std": 0.5219620239222472,
+      "geographic_extent": {
+        "longitude_span": 4.3669967999999955,
+        "latitude_span": 2.268100699999998,
+        "total_area_deg2": 9.90478849897774
+      }
+    },
+    "water": {
+      "total_samples": 159,
+      "lon_range": [
+        112.508064,
+        116.47361959
+      ],
+      "lat_range": [
+        32.5063124,
+        34.83152
+      ],
+      "lon_center": 114.29794466075471,
+      "lat_center": 33.71773928132075,
+      "lon_std": 0.947445421826294,
+      "lat_std": 0.5254998898746082,
+      "geographic_extent": {
+        "longitude_span": 3.965555589999994,
+        "latitude_span": 2.325207599999999,
+        "total_area_deg2": 9.220739996090465
+      }
+    }
+  },
+  "seasonal_stats": {
+    "soil": {
+      "season_counts": {
+        "Rainy": 62,
+        "Dry": 62,
+        "Normal": 62
+      },
+      "total_samples": 186,
+      "seasonal_balance": {
+        "Rainy": 0.3333333333333333,
+        "Dry": 0.3333333333333333,
+        "Normal": 0.3333333333333333
+      },
+      "seasonal_geographic": {
+        "Rainy": {
+          "count": 62,
+          "lon_mean": 114.09035504032258,
+          "lat_mean": 33.77016793709678,
+          "lon_std": 1.108119528110245,
+          "lat_std": 0.5248065246784412
+        },
+        "Dry": {
+          "count": 62,
+          "lon_mean": 114.09035504032258,
+          "lat_mean": 33.77016793709678,
+          "lon_std": 1.108119528110245,
+          "lat_std": 0.5248065246784412
+        },
+        "Normal": {
+          "count": 62,
+          "lon_mean": 114.09035504032258,
+          "lat_mean": 33.77016793709678,
+          "lon_std": 1.108119528110245,
+          "lat_std": 0.5248065246784412
+        }
+      }
+    },
+    "water": {
+      "season_counts": {
+        "Rainy": 53,
+        "Dry": 53,
+        "Normal": 53
+      },
+      "total_samples": 159,
+      "seasonal_balance": {
+        "Rainy": 0.3333333333333333,
+        "Dry": 0.3333333333333333,
+        "Normal": 0.3333333333333333
+      },
+      "seasonal_geographic": {
+        "Rainy": {
+          "count": 53,
+          "lon_mean": 114.2979446607547,
+          "lat_mean": 33.71773928132075,
+          "lon_std": 0.9534994477821584,
+          "lat_std": 0.5288577508128902
+        },
+        "Dry": {
+          "count": 53,
+          "lon_mean": 114.2979446607547,
+          "lat_mean": 33.71773928132075,
+          "lon_std": 0.9534994477821584,
+          "lat_std": 0.5288577508128902
+        },
+        "Normal": {
+          "count": 53,
+          "lon_mean": 114.2979446607547,
+          "lat_mean": 33.71773928132075,
+          "lon_std": 0.9534994477821584,
+          "lat_std": 0.5288577508128902
+        }
+      }
+    }
+  },
+  "grid_parameters": {
+    "soil": {
+      "recommended_grid_size_deg": 0.2,
+      "grid_size_km": 22.200000000000003,
+      "lon_cells": 22,
+      "lat_cells": 12,
+      "total_cells": 264,
+      "samples_per_cell_avg": 0.7045454545454546,
+      "sample_density_per_deg2": 18.778795732912094
+    },
+    "water": {
+      "recommended_grid_size_deg": 0.2,
+      "grid_size_km": 22.200000000000003,
+      "lon_cells": 20,
+      "lat_cells": 12,
+      "total_cells": 240,
+      "samples_per_cell_avg": 0.6625,
+      "sample_density_per_deg2": 17.2437353257347
+    },
+    "combined": {
+      "recommended_grid_size_deg": 0.2,
+      "grid_size_km": 22.200000000000003,
+      "max_soil_cells": 264,
+      "max_water_cells": 240
+    }
+  },
+  "distance_stats": {
+    "soil": {
+      "min_distance_deg": 0.0,
+      "max_distance_deg": 4.517359235222521,
+      "mean_distance_deg": 1.466778430894493,
+      "std_distance_deg": 0.9070599246180656,
+      "min_distance_km": 0.0,
+      "max_distance_km": 501.4268751096999,
+      "mean_distance_km": 162.81240582928874,
+      "std_distance_km": 100.68365163260529,
+      "median_distance_km": 143.92507701874646,
+      "percentiles_km": {
+        "p10": 40.925956892050124,
+        "p25": 81.96100105874784,
+        "p50": 143.92507701874646,
+        "p75": 224.38718782410132,
+        "p90": 312.0055031959926,
+        "p95": 354.02784178891517
+      }
+    },
+    "water": {
+      "min_distance_deg": 0.0,
+      "max_distance_deg": 4.299963838157196,
+      "mean_distance_deg": 1.3088004303400582,
+      "std_distance_deg": 0.7966475737346705,
+      "min_distance_km": 0.0,
+      "max_distance_km": 477.2959860354488,
+      "mean_distance_km": 145.27684776774643,
+      "std_distance_km": 88.42788068454843,
+      "median_distance_km": 129.94939707121173,
+      "percentiles_km": {
+        "p10": 42.553593170432165,
+        "p25": 76.89107431938683,
+        "p50": 129.94939707121173,
+        "p75": 204.00601307170322,
+        "p90": 273.1466645696071,
+        "p95": 310.36463740155955
+      }
+    }
+  },
+  "analysis_timestamp": "2025-11-10T15:22:23.023723",
+  "density_summary": {
+    "soil": {
+      "standardization_params": {
+        "mean": "[114.09035504  33.77016794]",
+        "std": "[1.10211342 0.52196202]"
+      }
+    },
+    "water": {
+      "standardization_params": {
+        "mean": "[114.29794466  33.71773928]",
+        "std": "[0.94744542 0.52549989]"
+      }
+    }
+  },
+  "cluster_summary": {
+    "soil": {
+      "cluster_info": {
+        "cluster_0": {
+          "count": 3,
+          "lon_mean": 116.1709976,
+          "lat_mean": 32.6222992,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_1": {
+          "count": 3,
+          "lon_mean": 116.4449997,
+          "lat_mean": 32.6040001,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_2": {
+          "count": 3,
+          "lon_mean": 115.6419983,
+          "lat_mean": 32.8894005,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_3": {
+          "count": 3,
+          "lon_mean": 115.9179993,
+          "lat_mean": 32.8722,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_4": {
+          "count": 3,
+          "lon_mean": 116.1930008,
+          "lat_mean": 32.8543015,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_5": {
+          "count": 3,
+          "lon_mean": 113.16899870000002,
+          "lat_mean": 33.2508011,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_6": {
+          "count": 3,
+          "lon_mean": 114.8330002,
+          "lat_mean": 33.1702995,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_7": {
+          "count": 3,
+          "lon_mean": 115.11000059999999,
+          "lat_mean": 33.1547012,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_8": {
+          "count": 3,
+          "lon_mean": 115.3860016,
+          "lat_mean": 33.1385002,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_9": {
+          "count": 3,
+          "lon_mean": 115.6620026,
+          "lat_mean": 33.1217003,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_10": {
+          "count": 3,
+          "lon_mean": 115.9380035,
+          "lat_mean": 33.1044006,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_11": {
+          "count": 3,
+          "lon_mean": 112.9039993,
+          "lat_mean": 33.4956017,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_12": {
+          "count": 3,
+          "lon_mean": 113.1829987,
+          "lat_mean": 33.4842987,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_13": {
+          "count": 3,
+          "lon_mean": 113.4609985,
+          "lat_mean": 33.4723015,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_14": {
+          "count": 3,
+          "lon_mean": 114.2959976,
+          "lat_mean": 33.4325981,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_15": {
+          "count": 3,
+          "lon_mean": 114.5739975,
+          "lat_mean": 33.4180984,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_16": {
+          "count": 3,
+          "lon_mean": 114.8509979,
+          "lat_mean": 33.4029999,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_17": {
+          "count": 3,
+          "lon_mean": 115.1289978,
+          "lat_mean": 33.3872986,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_18": {
+          "count": 3,
+          "lon_mean": 115.4059982,
+          "lat_mean": 33.3709984,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_19": {
+          "count": 3,
+          "lon_mean": 115.6829987,
+          "lat_mean": 33.3540993,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_20": {
+          "count": 3,
+          "lon_mean": 112.0780029,
+          "lat_mean": 33.7598,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_21": {
+          "count": 3,
+          "lon_mean": 112.3580017,
+          "lat_mean": 33.7501984,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_22": {
+          "count": 3,
+          "lon_mean": 112.63800050000002,
+          "lat_mean": 33.7400017,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_23": {
+          "count": 3,
+          "lon_mean": 112.9179993,
+          "lat_mean": 33.7291985,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_24": {
+          "count": 3,
+          "lon_mean": 113.19699859999999,
+          "lat_mean": 33.717701,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_25": {
+          "count": 3,
+          "lon_mean": 113.4759979,
+          "lat_mean": 33.7056007,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_26": {
+          "count": 3,
+          "lon_mean": 113.7549973,
+          "lat_mean": 33.6929016,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_27": {
+          "count": 3,
+          "lon_mean": 114.03399659999998,
+          "lat_mean": 33.6795006,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_28": {
+          "count": 3,
+          "lon_mean": 114.3130035,
+          "lat_mean": 33.6655998,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_29": {
+          "count": 3,
+          "lon_mean": 114.59100340000002,
+          "lat_mean": 33.651001,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_30": {
+          "count": 3,
+          "lon_mean": 114.8700027,
+          "lat_mean": 33.6357002,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_31": {
+          "count": 3,
+          "lon_mean": 115.1480026,
+          "lat_mean": 33.6198997,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_32": {
+          "count": 3,
+          "lon_mean": 115.4260025,
+          "lat_mean": 33.6034012,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_33": {
+          "count": 3,
+          "lon_mean": 112.3700027,
+          "lat_mean": 33.9840012,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_34": {
+          "count": 3,
+          "lon_mean": 112.651001,
+          "lat_mean": 33.9737015,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_35": {
+          "count": 3,
+          "lon_mean": 112.9309998,
+          "lat_mean": 33.9626999,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_36": {
+          "count": 3,
+          "lon_mean": 113.2109985,
+          "lat_mean": 33.9511986,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_37": {
+          "count": 3,
+          "lon_mean": 113.4909973,
+          "lat_mean": 33.9389,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_38": {
+          "count": 3,
+          "lon_mean": 113.7710037,
+          "lat_mean": 33.9261017,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_39": {
+          "count": 3,
+          "lon_mean": 114.0510025,
+          "lat_mean": 33.9126015,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_40": {
+          "count": 3,
+          "lon_mean": 114.3300018,
+          "lat_mean": 33.8984985,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_41": {
+          "count": 3,
+          "lon_mean": 114.60900120000001,
+          "lat_mean": 33.8838005,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_42": {
+          "count": 3,
+          "lon_mean": 114.88800050000002,
+          "lat_mean": 33.8684998,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_43": {
+          "count": 3,
+          "lon_mean": 115.1669998,
+          "lat_mean": 33.8525009,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_44": {
+          "count": 3,
+          "lon_mean": 112.3820038,
+          "lat_mean": 34.217701,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_45": {
+          "count": 3,
+          "lon_mean": 112.663002,
+          "lat_mean": 34.2072983,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_46": {
+          "count": 3,
+          "lon_mean": 112.9449997,
+          "lat_mean": 34.1962013,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_47": {
+          "count": 3,
+          "lon_mean": 113.22499850000001,
+          "lat_mean": 34.1846008,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_48": {
+          "count": 3,
+          "lon_mean": 113.50599670000001,
+          "lat_mean": 34.1722984,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_49": {
+          "count": 3,
+          "lon_mean": 113.7870026,
+          "lat_mean": 34.1593018,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_50": {
+          "count": 3,
+          "lon_mean": 114.0670013,
+          "lat_mean": 34.1456985,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_51": {
+          "count": 3,
+          "lon_mean": 114.3479996,
+          "lat_mean": 34.1315002,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_52": {
+          "count": 3,
+          "lon_mean": 112.9580002,
+          "lat_mean": 34.4297981,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_53": {
+          "count": 3,
+          "lon_mean": 113.2399979,
+          "lat_mean": 34.4179993,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_54": {
+          "count": 3,
+          "lon_mean": 113.52200320000001,
+          "lat_mean": 34.4056015,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_55": {
+          "count": 3,
+          "lon_mean": 113.80300140000001,
+          "lat_mean": 34.3925018,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_56": {
+          "count": 3,
+          "lon_mean": 114.08399960000001,
+          "lat_mean": 34.3787994,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_57": {
+          "count": 3,
+          "lon_mean": 113.5370026,
+          "lat_mean": 34.6388016,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_58": {
+          "count": 3,
+          "lon_mean": 113.8190002,
+          "lat_mean": 34.6257019,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_59": {
+          "count": 3,
+          "lon_mean": 114.1009979,
+          "lat_mean": 34.6118011,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_60": {
+          "count": 3,
+          "lon_mean": 113.55300140000001,
+          "lat_mean": 34.8721008,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_61": {
+          "count": 3,
+          "lon_mean": 113.8359985,
+          "lat_mean": 34.858799,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        }
+      },
+      "n_clusters": 62,
+      "n_noise_points": "0"
+    },
+    "water": {
+      "cluster_info": {
+        "cluster_0": {
+          "count": 3,
+          "lon_mean": 113.568665,
+          "lat_mean": 34.692959,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_1": {
+          "count": 3,
+          "lon_mean": 113.605598,
+          "lat_mean": 34.83152,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_2": {
+          "count": 3,
+          "lon_mean": 113.822639,
+          "lat_mean": 34.813179,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_3": {
+          "count": 3,
+          "lon_mean": 114.11042000000002,
+          "lat_mean": 34.681297,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_4": {
+          "count": 3,
+          "lon_mean": 114.213905,
+          "lat_mean": 34.513611,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_5": {
+          "count": 3,
+          "lon_mean": 114.219719,
+          "lat_mean": 34.299099,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_6": {
+          "count": 3,
+          "lon_mean": 114.016617,
+          "lat_mean": 34.241879,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_7": {
+          "count": 3,
+          "lon_mean": 113.797198,
+          "lat_mean": 34.310427,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_8": {
+          "count": 3,
+          "lon_mean": 113.24561720000001,
+          "lat_mean": 34.33828467,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_9": {
+          "count": 3,
+          "lon_mean": 113.540115,
+          "lat_mean": 34.119061,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_10": {
+          "count": 3,
+          "lon_mean": 113.234245,
+          "lat_mean": 33.918938,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_11": {
+          "count": 3,
+          "lon_mean": 113.03697800000002,
+          "lat_mean": 34.023516,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_12": {
+          "count": 3,
+          "lon_mean": 112.85263100000002,
+          "lat_mean": 34.135891,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_13": {
+          "count": 3,
+          "lon_mean": 112.508064,
+          "lat_mean": 34.168858,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_14": {
+          "count": 3,
+          "lon_mean": 112.767553,
+          "lat_mean": 33.723039,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_15": {
+          "count": 3,
+          "lon_mean": 113.22757,
+          "lat_mean": 33.717736,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_16": {
+          "count": 3,
+          "lon_mean": 113.071388,
+          "lat_mean": 33.489258,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_17": {
+          "count": 3,
+          "lon_mean": 113.307592,
+          "lat_mean": 33.503694,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_18": {
+          "count": 3,
+          "lon_mean": 113.47805,
+          "lat_mean": 33.838063,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_19": {
+          "count": 3,
+          "lon_mean": 113.48101000000001,
+          "lat_mean": 33.719601,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_20": {
+          "count": 6,
+          "lon_mean": 113.553109,
+          "lat_mean": 33.502297999999996,
+          "lon_std": 0.06711901764179572,
+          "lat_std": 0.010603908713299432
+        },
+        "cluster_21": {
+          "count": 3,
+          "lon_mean": 113.7547,
+          "lat_mean": 33.604828,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_22": {
+          "count": 3,
+          "lon_mean": 113.981996,
+          "lat_mean": 33.898062,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_23": {
+          "count": 3,
+          "lon_mean": 113.988853,
+          "lat_mean": 33.56197,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_24": {
+          "count": 3,
+          "lon_mean": 113.79037899999999,
+          "lat_mean": 33.873106,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_25": {
+          "count": 3,
+          "lon_mean": 114.336411,
+          "lat_mean": 34.15601,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_26": {
+          "count": 3,
+          "lon_mean": 114.24511,
+          "lat_mean": 33.789991,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_27": {
+          "count": 6,
+          "lon_mean": 114.1651585,
+          "lat_mean": 33.684257,
+          "lon_std": 0.0002820771171112924,
+          "lat_std": 0.0170812756783551
+        },
+        "cluster_28": {
+          "count": 6,
+          "lon_mean": 114.656882,
+          "lat_mean": 33.6246255,
+          "lon_std": 0.013398389201691242,
+          "lat_std": 0.0015659387919077263
+        },
+        "cluster_29": {
+          "count": 3,
+          "lon_mean": 114.578819,
+          "lat_mean": 33.499606,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_30": {
+          "count": 3,
+          "lon_mean": 114.589291,
+          "lat_mean": 33.716915,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_31": {
+          "count": 3,
+          "lon_mean": 115.09195800000002,
+          "lat_mean": 33.386733,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_32": {
+          "count": 3,
+          "lon_mean": 115.347653,
+          "lat_mean": 33.578106,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_33": {
+          "count": 3,
+          "lon_mean": 115.420475,
+          "lat_mean": 33.650279,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_34": {
+          "count": 3,
+          "lon_mean": 115.117128,
+          "lat_mean": 33.171378,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_35": {
+          "count": 6,
+          "lon_mean": 115.31229050000002,
+          "lat_mean": 33.2839475,
+          "lon_std": 0.04556011005583512,
+          "lat_std": 0.02906708840424204
+        },
+        "cluster_36": {
+          "count": 3,
+          "lon_mean": 115.83838299999998,
+          "lat_mean": 32.902642,
+          "lon_std": 1.7404671430534633e-14,
+          "lat_std": 0.0
+        },
+        "cluster_37": {
+          "count": 3,
+          "lon_mean": 116.10733469,
+          "lat_mean": 32.79384587,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_38": {
+          "count": 3,
+          "lon_mean": 116.47361959,
+          "lat_mean": 32.5063124,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_39": {
+          "count": 3,
+          "lon_mean": 115.59558475,
+          "lat_mean": 33.19628467,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_40": {
+          "count": 3,
+          "lon_mean": 115.72722576,
+          "lat_mean": 33.05000283,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_41": {
+          "count": 3,
+          "lon_mean": 115.7502088,
+          "lat_mean": 33.20525619,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_42": {
+          "count": 3,
+          "lon_mean": 115.33930154,
+          "lat_mean": 33.0519876,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_43": {
+          "count": 3,
+          "lon_mean": 115.56813694,
+          "lat_mean": 32.9922452,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_44": {
+          "count": 3,
+          "lon_mean": 114.79517197,
+          "lat_mean": 33.2795755,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_45": {
+          "count": 3,
+          "lon_mean": 114.70594725,
+          "lat_mean": 33.20716365,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_46": {
+          "count": 3,
+          "lon_mean": 114.4442393,
+          "lat_mean": 33.37235801,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_47": {
+          "count": 3,
+          "lon_mean": 115.15009564,
+          "lat_mean": 33.78151097,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        },
+        "cluster_48": {
+          "count": 3,
+          "lon_mean": 113.57259059,
+          "lat_mean": 34.54384635,
+          "lon_std": 0.0,
+          "lat_std": 0.0
+        }
+      },
+      "n_clusters": 49,
+      "n_noise_points": "0"
+    }
+  }
+}

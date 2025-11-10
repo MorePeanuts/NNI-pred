@@ -1,0 +1,61 @@
+{
+  "pollutant_groups": [
+    [
+      "THIA",
+      "IMI"
+    ],
+    [
+      "CLO"
+    ],
+    [
+      "ACE"
+    ],
+    [
+      "DIN",
+      "parentNNIs"
+    ],
+    [
+      "IMI-UREA"
+    ],
+    [
+      "DN-IMI",
+      "mNNIs"
+    ],
+    [
+      "DM-ACE"
+    ],
+    [
+      "CLO-UREA"
+    ]
+  ],
+  "parent_metabolite_relationships": [
+    {
+      "parent": "IMI",
+      "metabolite": "IMI-UREA",
+      "correlation": 0.615883470604333
+    },
+    {
+      "parent": "IMI",
+      "metabolite": "DN-IMI",
+      "correlation": 0.34281261124781714
+    },
+    {
+      "parent": "CLO",
+      "metabolite": "CLO-UREA",
+      "correlation": 0.19223946199125344
+    },
+    {
+      "parent": "ACE",
+      "metabolite": "DM-ACE",
+      "correlation": 0.3225591945860391
+    },
+    {
+      "parent": "parentNNIs",
+      "metabolite": "mNNIs",
+      "correlation": 0.6745419748897538
+    }
+  ],
+  "total_groups": 8,
+  "correlation_threshold": 0.7,
+  "analysis_timestamp": "2025-11-10T14:38:02.624892"
+}

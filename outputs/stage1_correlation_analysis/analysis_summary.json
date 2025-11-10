@@ -1,0 +1,467 @@
+{
+  "analysis_info": {
+    "soil_sample_size": 186,
+    "water_sample_size": 159,
+    "soil_pollutants": [
+      "THIA",
+      "IMI",
+      "CLO",
+      "parentNNIs",
+      "IMI-UREA",
+      "DN-IMI",
+      "CLO-UREA",
+      "mNNIs"
+    ],
+    "water_pollutants": [
+      "THIA",
+      "IMI",
+      "CLO",
+      "ACE",
+      "DIN",
+      "parentNNIs",
+      "IMI-UREA",
+      "DN-IMI",
+      "DM-ACE",
+      "CLO-UREA",
+      "mNNIs"
+    ]
+  },
+  "results": {
+    "soil": {
+      "sample_size": 186,
+      "available_pollutants": [
+        "THIA",
+        "IMI",
+        "CLO",
+        "parentNNIs",
+        "IMI-UREA",
+        "DN-IMI",
+        "CLO-UREA",
+        "mNNIs"
+      ],
+      "high_correlation_pairs": [
+        {
+          "pollutant1": "THIA",
+          "pollutant2": "IMI",
+          "correlation": 0.8368199801275499,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "THIA",
+          "pollutant2": "CLO",
+          "correlation": 0.7682139524131941,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "THIA",
+          "pollutant2": "parentNNIs",
+          "correlation": 0.9438331777529064,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "IMI",
+          "pollutant2": "CLO",
+          "correlation": 0.7589185290662022,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "IMI",
+          "pollutant2": "parentNNIs",
+          "correlation": 0.9603696422384107,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "CLO",
+          "pollutant2": "parentNNIs",
+          "correlation": 0.8576404445610178,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "CLO",
+          "pollutant2": "mNNIs",
+          "correlation": 0.7088397401838515,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "DN-IMI",
+          "pollutant2": "mNNIs",
+          "correlation": 0.77702735039708,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "CLO-UREA",
+          "pollutant2": "mNNIs",
+          "correlation": 0.7645879874060298,
+          "relationship": "positive"
+        }
+      ],
+      "parent_metabolite_correlations": {
+        "IMI_IMI-UREA": 0.6617342882311464,
+        "IMI_DN-IMI": 0.13152404706632195,
+        "CLO_CLO-UREA": 0.6736912013822379
+      },
+      "modeling_suggestions": {
+        "multi_output_groups": [
+          [
+            "THIA",
+            "CLO-UREA"
+          ],
+          [
+            "IMI",
+            "IMI-UREA"
+          ],
+          [
+            "CLO",
+            "CLO-UREA",
+            "mNNIs"
+          ],
+          [
+            "parentNNIs",
+            "IMI-UREA",
+            "mNNIs"
+          ]
+        ],
+        "single_output_pollutants": [
+          "DN-IMI"
+        ],
+        "high_correlation_pairs": [
+          {
+            "pollutant1": "THIA",
+            "pollutant2": "IMI",
+            "correlation": 0.8368199801275499,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "THIA",
+            "pollutant2": "CLO",
+            "correlation": 0.7682139524131941,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "THIA",
+            "pollutant2": "parentNNIs",
+            "correlation": 0.9438331777529064,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "IMI",
+            "pollutant2": "CLO",
+            "correlation": 0.7589185290662022,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "IMI",
+            "pollutant2": "parentNNIs",
+            "correlation": 0.9603696422384107,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "CLO",
+            "pollutant2": "parentNNIs",
+            "correlation": 0.8576404445610178,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "CLO",
+            "pollutant2": "mNNIs",
+            "correlation": 0.7088397401838515,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "DN-IMI",
+            "pollutant2": "mNNIs",
+            "correlation": 0.77702735039708,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "CLO-UREA",
+            "pollutant2": "mNNIs",
+            "correlation": 0.7645879874060298,
+            "relationship": "positive"
+          }
+        ],
+        "modeling_approach": "hybrid"
+      },
+      "threshold_groups": {
+        "threshold_0.8": {
+          "4": [
+            "THIA",
+            "IMI",
+            "parentNNIs"
+          ],
+          "5": [
+            "CLO"
+          ],
+          "6": [
+            "IMI-UREA"
+          ],
+          "1": [
+            "DN-IMI"
+          ],
+          "3": [
+            "CLO-UREA"
+          ],
+          "2": [
+            "mNNIs"
+          ]
+        },
+        "threshold_0.7": {
+          "3": [
+            "THIA",
+            "IMI",
+            "CLO",
+            "parentNNIs"
+          ],
+          "4": [
+            "IMI-UREA"
+          ],
+          "1": [
+            "DN-IMI",
+            "mNNIs"
+          ],
+          "2": [
+            "CLO-UREA"
+          ]
+        },
+        "threshold_0.6": {
+          "2": [
+            "THIA",
+            "IMI",
+            "CLO",
+            "parentNNIs"
+          ],
+          "3": [
+            "IMI-UREA"
+          ],
+          "1": [
+            "DN-IMI",
+            "CLO-UREA",
+            "mNNIs"
+          ]
+        },
+        "threshold_0.5": {
+          "2": [
+            "THIA",
+            "IMI",
+            "CLO",
+            "parentNNIs",
+            "IMI-UREA"
+          ],
+          "1": [
+            "DN-IMI",
+            "CLO-UREA",
+            "mNNIs"
+          ]
+        }
+      }
+    },
+    "water": {
+      "sample_size": 159,
+      "available_pollutants": [
+        "THIA",
+        "IMI",
+        "CLO",
+        "ACE",
+        "DIN",
+        "parentNNIs",
+        "IMI-UREA",
+        "DN-IMI",
+        "DM-ACE",
+        "CLO-UREA",
+        "mNNIs"
+      ],
+      "high_correlation_pairs": [
+        {
+          "pollutant1": "THIA",
+          "pollutant2": "IMI",
+          "correlation": 0.9399228089519251,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "DIN",
+          "pollutant2": "parentNNIs",
+          "correlation": 0.9382747316813189,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "DN-IMI",
+          "pollutant2": "mNNIs",
+          "correlation": 0.9360619399759352,
+          "relationship": "positive"
+        },
+        {
+          "pollutant1": "CLO-UREA",
+          "pollutant2": "mNNIs",
+          "correlation": 0.7037151902086493,
+          "relationship": "positive"
+        }
+      ],
+      "parent_metabolite_correlations": {
+        "IMI_IMI-UREA": 0.615883470604333,
+        "IMI_DN-IMI": 0.34281261124781714,
+        "CLO_CLO-UREA": 0.19223946199125344,
+        "ACE_DM-ACE": 0.3225591945860391
+      },
+      "modeling_suggestions": {
+        "multi_output_groups": [
+          [
+            "IMI",
+            "IMI-UREA"
+          ],
+          [
+            "CLO",
+            "IMI-UREA"
+          ],
+          [
+            "DIN",
+            "mNNIs"
+          ],
+          [
+            "parentNNIs",
+            "DN-IMI",
+            "mNNIs"
+          ]
+        ],
+        "single_output_pollutants": [
+          "DM-ACE",
+          "CLO-UREA"
+        ],
+        "high_correlation_pairs": [
+          {
+            "pollutant1": "THIA",
+            "pollutant2": "IMI",
+            "correlation": 0.9399228089519251,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "DIN",
+            "pollutant2": "parentNNIs",
+            "correlation": 0.9382747316813189,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "DN-IMI",
+            "pollutant2": "mNNIs",
+            "correlation": 0.9360619399759352,
+            "relationship": "positive"
+          },
+          {
+            "pollutant1": "CLO-UREA",
+            "pollutant2": "mNNIs",
+            "correlation": 0.7037151902086493,
+            "relationship": "positive"
+          }
+        ],
+        "modeling_approach": "hybrid"
+      },
+      "threshold_groups": {
+        "threshold_0.8": {
+          "4": [
+            "THIA",
+            "IMI"
+          ],
+          "5": [
+            "CLO"
+          ],
+          "7": [
+            "ACE"
+          ],
+          "1": [
+            "DIN",
+            "parentNNIs"
+          ],
+          "6": [
+            "IMI-UREA"
+          ],
+          "2": [
+            "DN-IMI",
+            "mNNIs"
+          ],
+          "8": [
+            "DM-ACE"
+          ],
+          "3": [
+            "CLO-UREA"
+          ]
+        },
+        "threshold_0.7": {
+          "4": [
+            "THIA",
+            "IMI"
+          ],
+          "5": [
+            "CLO"
+          ],
+          "7": [
+            "ACE"
+          ],
+          "1": [
+            "DIN",
+            "parentNNIs"
+          ],
+          "6": [
+            "IMI-UREA"
+          ],
+          "2": [
+            "DN-IMI",
+            "mNNIs"
+          ],
+          "8": [
+            "DM-ACE"
+          ],
+          "3": [
+            "CLO-UREA"
+          ]
+        },
+        "threshold_0.6": {
+          "3": [
+            "THIA",
+            "IMI"
+          ],
+          "4": [
+            "CLO",
+            "IMI-UREA"
+          ],
+          "5": [
+            "ACE"
+          ],
+          "1": [
+            "DIN",
+            "parentNNIs"
+          ],
+          "2": [
+            "DN-IMI",
+            "CLO-UREA",
+            "mNNIs"
+          ],
+          "6": [
+            "DM-ACE"
+          ]
+        },
+        "threshold_0.5": {
+          "3": [
+            "THIA",
+            "IMI",
+            "CLO",
+            "IMI-UREA"
+          ],
+          "4": [
+            "ACE"
+          ],
+          "1": [
+            "DIN",
+            "parentNNIs"
+          ],
+          "2": [
+            "DN-IMI",
+            "CLO-UREA",
+            "mNNIs"
+          ],
+          "5": [
+            "DM-ACE"
+          ]
+        }
+      }
+    }
+  }
+}

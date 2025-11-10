@@ -1,0 +1,26 @@
+{
+  "soil": {
+    "recommended_grid_size_deg": 0.2,
+    "grid_size_km": 22.200000000000003,
+    "lon_cells": 22,
+    "lat_cells": 12,
+    "total_cells": 264,
+    "samples_per_cell_avg": 0.7045454545454546,
+    "sample_density_per_deg2": 18.778795732912094
+  },
+  "water": {
+    "recommended_grid_size_deg": 0.2,
+    "grid_size_km": 22.200000000000003,
+    "lon_cells": 20,
+    "lat_cells": 12,
+    "total_cells": 240,
+    "samples_per_cell_avg": 0.6625,
+    "sample_density_per_deg2": 17.2437353257347
+  },
+  "combined": {
+    "recommended_grid_size_deg": 0.2,
+    "grid_size_km": 22.200000000000003,
+    "max_soil_cells": 264,
+    "max_water_cells": 240
+  }
+}

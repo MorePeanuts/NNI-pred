@@ -1,0 +1,12 @@
+group,pollutant
+Group_1,THIA
+Group_1,IMI
+Group_2,CLO
+Group_3,ACE
+Group_4,DIN
+Group_4,parentNNIs
+Group_5,IMI-UREA
+Group_6,DN-IMI
+Group_6,mNNIs
+Group_7,DM-ACE
+Group_8,CLO-UREA
