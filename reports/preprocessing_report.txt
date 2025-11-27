@@ -1,0 +1,150 @@
+================================================================================
+Feature Scaling and Grouped PCA Preprocessing Report
+================================================================================
+
+1. SKEWNESS DIAGNOSIS AND CORRECTION
+--------------------------------------------------------------------------------
+
+Skewness threshold: 0.75
+Transformation: Log(x+1) for |skew| > 0.75
+
+Total continuous features: 127
+Transformed features: 80
+Unchanged features: 47
+
+Top 10 Most Skewed Features (Original):
+Feature                               Original Skew        New Skew Method              
+-------------------------------------------------------------------------------------
+Soil_IMI_1                                  12.1565          0.6805 log(x+1)            
+Soil_IMI_4                                  12.0329          0.5857 log(x+1)            
+Soil_IMI_2                                  11.9789          0.5201 log(x+1)            
+Soil_parentNNIs_1                           11.7038         -0.5629 log(x+1)            
+Soil_parentNNIs_4                           11.3274         -0.6397 log(x+1)            
+Soil_THIA_1                                 10.7647          0.5181 log(x+1)            
+Soil_parentNNIs_2                           10.4748         -0.4397 log(x+1)            
+Soil_THIA_4                                  9.9122          0.6774 log(x+1)            
+Soil_IMI-UREA_2                              8.9912          3.1786 log(x+1)            
+Soil_IMI-UREA_1                              8.6438          4.7861 log(x+1)            
+
+2. FEATURE GROUPING
+--------------------------------------------------------------------------------
+
+Group 1 (Natural & Spatial): 66 features
+  - Processing: Standardization only (no PCA)
+
+Group 2 (Agricultural Intensity): 32 features
+  - Processing: Standardization + PCA (95% variance)
+  - Output: 11 principal components
+
+Group 3 (Socio-Economic): 29 features
+  - Processing: Standardization + PCA (95% variance)
+  - Output: 10 principal components
+
+Categorical: 3 features
+  - Processing: One-hot encoding (drop first)
+  - Output: 5 features
+
+3. PCA ANALYSIS - GROUP 2 (AGRICULTURAL INTENSITY)
+--------------------------------------------------------------------------------
+
+Number of components: 11
+Total variance explained: 0.9601
+
+Component              Variance      Cumulative
+---------------------------------------------
+PC_Agro_1                 0.5015          0.5015
+PC_Agro_2                 0.1188          0.6203
+PC_Agro_3                 0.0989          0.7192
+PC_Agro_4                 0.0727          0.7920
+PC_Agro_5                 0.0390          0.8310
+PC_Agro_6                 0.0344          0.8653
+PC_Agro_7                 0.0291          0.8944
+PC_Agro_8                 0.0237          0.9181
+PC_Agro_9                 0.0179          0.9361
+PC_Agro_10                0.0139          0.9500
+PC_Agro_11                0.0102          0.9601
+
+Top 5 Feature Loadings (Absolute Value):
+--------------------------------------------------------------------------------
+
+PC_Agro_1:
+  TSA                                0.2318
+  CROPOUT                            0.2309
+  WA                                 0.2283
+  WO                                 0.2277
+  FCA                                0.2263
+
+PC_Agro_2:
+  Soil_PESA_wMean                    0.3628
+  IRR_W                             -0.3623
+  Soil_IRR_W_wMean                  -0.3279
+  Soil_FERA_wMean                    0.2928
+  Soil_VE_wMean                      0.2757
+
+PC_Agro_3:
+  FERPER                             0.3850
+  PESPER                             0.3667
+  Soil_GPAM_wMean                   -0.2819
+  Soil_AGR_W_wMean                  -0.2780
+  Soil_MC_wMean                     -0.2500
+
+4. PCA ANALYSIS - GROUP 3 (SOCIO-ECONOMIC)
+--------------------------------------------------------------------------------
+
+Number of components: 10
+Total variance explained: 0.9581
+
+Component              Variance      Cumulative
+---------------------------------------------
+PC_Socio_1                 0.4032          0.4032
+PC_Socio_2                 0.1507          0.5539
+PC_Socio_3                 0.1247          0.6786
+PC_Socio_4                 0.0849          0.7635
+PC_Socio_5                 0.0601          0.8237
+PC_Socio_6                 0.0510          0.8747
+PC_Socio_7                 0.0357          0.9103
+PC_Socio_8                 0.0176          0.9279
+PC_Socio_9                 0.0155          0.9435
+PC_Socio_10                0.0146          0.9581
+
+Top 5 Feature Loadings (Absolute Value):
+--------------------------------------------------------------------------------
+
+PC_Socio_1:
+  Soil_UR_wMean                      0.2623
+  Soil_RI_wMean                      0.2618
+  RI                                 0.2587
+  Urban                              0.2406
+  Soil_PR_wMean                     -0.2400
+
+PC_Socio_2:
+  Soil_UR_W_wMean                    0.4087
+  Soil_RU_W_wMean                    0.4045
+  Soil_IND_W_wMean                   0.4045
+  RU_W                               0.3538
+  UR_W                               0.2722
+
+PC_Socio_3:
+  SR                                 0.4299
+  OP_SE                              0.3675
+  Soil_SR_wMean                      0.3667
+  TR                                -0.3647
+  RU_W                               0.2528
+
+5. FINAL PROCESSED DATASET SUMMARY
+--------------------------------------------------------------------------------
+
+Total samples: 159
+Total features: 92
+Target variables: 11
+Metadata columns: 4
+
+Feature Breakdown:
+  - Group 1 (Natural & Spatial): 66 features
+  - Categorical (One-hot): 5 features
+  - Group 2 (PC_Agro): 11 features
+  - Group 3 (PC_Socio): 10 features
+
+================================================================================
+END OF REPORT
+================================================================================

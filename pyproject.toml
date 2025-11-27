@@ -8,8 +8,12 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.7",
     "openpyxl>=3.1.5",
     "pandas>=2.3.3",
+    "scikit-learn>=1.7.2",
+    "seaborn>=0.13.2",
 ]
 
 [build-system]

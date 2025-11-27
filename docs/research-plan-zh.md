@@ -159,7 +159,9 @@
 
 ## 核心方法介绍
 
-### 空间特征工程：RFP
+### 空间特征工程：RFP + IDW2
+
+> 脚本位于 @scripts/sfe_merge.py , 输出结果位于 @datasets/merged_data.csv
 
 - 对于每个水体样本点，找到距离其最近的 k=5 个土壤样本点（同一个季节），不同的变量进行不同的处理：
   - RFP：直接用地理距离 + 最近k个点的原始值作为输入特征
@@ -193,3 +195,70 @@
 - 参考文献：
   - RFP方法提出于：https://peerj.com/articles/5518/
   - 使用RFP方法的文献：Li et al., ES&T 2023；Wu et al., Water Research 2024
+
+### 特征缩放和分组 PCA 降维
+
+针对环境与社会经济数据中普遍存在的**长尾分布**特征及变量间的高**多重共线性**，我们将采用“**基于分布的适应性变换**”与“**领域驱动的结构化降维**”相结合的预处理策略，在提升模型稳定性的同时，最大程度保留物理机制的可解释性。
+
+#### 数据分布特征诊断与偏度校正
+
+为满足集成学习中线性模型（Elastic Net）对数据分布的假设要求，并将非线性特征转化为模型更易捕捉的形式，将实施以下处理流程：
+
+- **分布诊断：** 对所有连续型输入变量进行偏度（Skewness）计算。
+- **适应性变换：**
+  - 对于**高偏度变量**（判定阈值设定为 $|Skewness| > 0.75$），统一执行 Log(x+1) 对数变换，以压缩长尾、修正分布偏差。
+  - 对于**近正态分布变量**（如 pH、温度、溶解氧等），**保留原始数值**，避免不必要的数学变换引入解释性噪音。
+
+#### 基于领域知识的结构化分组 PCA 降维
+
+为了在消除共线性的同时，避免“全局 PCA”导致物理意义混合（如将自然降雨与人为排放混为一谈），将采用**分组主成分分析**策略。所有特征将被划分为三类分别处理，其中农业集约化特征和社会经济发展特征这两组特征需要标准化后进行 PCA 降维。
+
+以下是特征的分组：
+
+- **自然驱动与空间异质性特征**：共 68 个变量，保留原始值（不做 PCA），仅做标准化。迁移过程的直接驱动力（降雨、地形）和源-汇关系的直接证据。
+  - **RFP 空间特征 (45个变量):**
+    - 邻近点浓度： `Soil_THIA_1`...`Soil_THIA_5` 等所有 8 种 NNI 及其代谢物在最近 5 个土壤点的浓度值。
+    - 空间距离： `Soil_Dist_1`...`Soil_Dist_5` （水体点到这 5 个土壤点的物理距离）。
+  - **气象因子 (Meteorological):**
+    - `PREC` (水体点降雨), `T_M` (气温), `T_W` (水温)。
+    - `Soil_Rain_wMean` (周边降雨背景), `Soil_Temp_wMean` (周边地温背景)。
+  - **水土理化性质 (Physicochemical):**
+    - 水体： `DO` (溶解氧), `pH`, `COND` (电导率), `DOC` (溶解性有机碳)。
+    - 土壤： `Soil_pH_wMean`, `Soil_TN_wMean` (总氮), `Soil_TOC_wMean` (总有机碳), `Soil_CC_wMean` (粘土含量), `Soil_BD_wMean` (土壤容重)。
+  - **植被与地形 (Vegetation & Topography):**
+    - `Alt` (海拔), `Soil_Alt_wMean`, `Soil_NDVI_wMean`, `Soil_EVI_wMean`, `Soil_LAI_wMean` (叶面积指数), `Soil_FCOVER_wMean` (植被覆盖度)。
+  - **时空标识与分类变量:**
+    - `Season` (季节), `Landuse` (水体点土地利用), `Soil_landuse` (周边主要土地利用)。
+
+- **农业集约化特征（Agro-Intensity Group）**：共 32 个变量，独立 PCA，提取 `PC_Agro`。反映化肥农药的投入强度及农业生产规模，代表“农业面源污染压力”。
+  - **农业投入品 (Inputs):**
+    - `FER`, `Soil_FER_wMean` (化肥总量); `FERPER`, `Soil_FERA_wMean` (单位面积化肥)。
+    - `PES`, `Soil_PES_wMean` (农药总量); `PESPER`, `Soil_PESA_wMean` (单位面积农药)。
+    - `AMP`, `Soil_GPAM_wMean` (农业机械总动力)。
+  - **种植规模 (Crop Area):**
+    - `TSA` (总播种面积), `FCA` (粮食作物面积)。
+    - `WA`, `Soil_WS_wMean` (小麦面积), `CA` (玉米面积), `VEGA` (蔬菜面积), `ARCA`.
+  - **农业产出 (Yields):**
+    - `CROPOUT` (粮食总产量)。
+    - `WO` , `Soil_MC_wMean` (小麦产量), `CO` (玉米产量), `VO` , `Soil_VE_wMean` (蔬菜产量), `FOP` / `Soil_FR_wMean` (水果产量)。
+    - `Soil_MCP_wMean`, `Soil_VEP_wMean`, `Soil_FRP_wMean` (各类作物的单产)。
+  - **农业用水 (Ag Water):**
+    - `AGR_W`, `Soil_AGR_W_wMean` (农业用水量), `IRR_W`, `Soil_IRR_W_wMean` (灌溉用水量)。
+
+- **社会经济发展特征（Socio-Economic Group）**：共 29 个变量，独立 PCA，提取 `PC_Socio`。反映城市化水平、工业化程度及人口聚集度，代表“点源排放与生活污染压力”。
+  - **宏观经济 (Macro Economy):**
+    - `GDP`, `Soil_GDP per capita_wMean` (人均GDP)。
+    - `OP_FI` (一产值), `OP_SE` (二产值), `OP_TH` (三产值)。
+    - `AO` (农业总产值), `FO` (林业总产值), `Soil_GAO_wMean` (农业总产值背景)。
+  - **城市化与人口 (Urbanization & Pop):**
+    - `Urban` (城市化率), `Soil_UR_wMean` (周边城市化率), `POP_TOT` (总人口)。
+  - **产业结构与收入 (Structure & Income):**
+    - `PR`, `Soil_PR_wMean` (一产占比); `SR`, `Soil_SR_wMean` (二产占比); `TR`, `Soil_TR_wMean` (三产占比)。
+    - `UI`, `Soil_UI_wMean` (城镇居民收入); `RI`, `Soil_RI_wMean` (农村居民收入)。
+  - **生活与工业用水 (Non-Ag Water):**
+    - `UR_W`, `Soil_UR_W_wMean` (城镇生活用水); `RU_W`, `Soil_RU_W_wMean` (农村生活用水)。
+    - `IND_W`, `Soil_IND_W_wMean` (工业用水); `LIF_W`, `Soil_LIF_W_wMean` (生活总用水)。
+
+#### 全局标准化
+
+在特征工程与降维完成后，对进入 Stacking 集成模型的所有特征（包括保留的自然因子和 PCA 生成的主成分）执行 Z-Score 标准化（Standardization）。此步骤旨在消除不同变量量纲（如浓度单位 vs 经济金额）的巨大差异，确保 Elastic Net 的正则化项能够公平作用于所有特征，防止模型收敛困难。
