@@ -15,7 +15,6 @@ import numpy as np
 import json
 from pathlib import Path
 from tqdm import tqdm
-from typing import Dict, List, Optional
 
 from ..preprocessing import get_feature_groups
 from ..validation import SpatialGroupGenerator, NestedSpatialCV
@@ -60,7 +59,7 @@ class BatchTrainer:
         self,
         data_path: str,
         output_dir: str,
-        pollutants: Optional[List[str]] = None,
+        pollutants: list[str] | None = None,
         grid_size: str = 'full',
     ) -> pd.DataFrame:
         """
@@ -76,13 +75,13 @@ class BatchTrainer:
             DataFrame with results summary
         """
         # Load data
-        print(f"\n{'='*80}")
-        print("BATCH TRAINING: NESTED SPATIAL CROSS-VALIDATION")
-        print(f"{'='*80}")
-        print(f"Loading data from: {data_path}\n")
+        print(f'\n{"=" * 80}')
+        print('BATCH TRAINING: NESTED SPATIAL CROSS-VALIDATION')
+        print(f'{"=" * 80}')
+        print(f'Loading data from: {data_path}\n')
 
         df = pd.read_csv(data_path)
-        print(f"Data shape: {df.shape}")
+        print(f'Data shape: {df.shape}')
 
         # Prepare data
         X, y_dict, groups = self._prepare_data(df)
@@ -93,10 +92,10 @@ class BatchTrainer:
         else:
             pollutants_to_train = pollutants
 
-        print(f"\nPollutants to train: {len(pollutants_to_train)}")
-        print(f"Models per pollutant: 3 (ElasticNet, RandomForest, XGBoost)")
-        print(f"Total combinations: {len(pollutants_to_train) * 3}")
-        print(f"Grid size: {grid_size}")
+        print(f'\nPollutants to train: {len(pollutants_to_train)}')
+        print('Models per pollutant: 3 (ElasticNet, RandomForest, XGBoost)')
+        print(f'Total combinations: {len(pollutants_to_train) * 3}')
+        print(f'Grid size: {grid_size}')
 
         # Initialize models with appropriate grid
         models = self._get_models(grid_size)
@@ -114,22 +113,19 @@ class BatchTrainer:
         detailed_results = {}
 
         # Train all combinations
-        for pollutant in tqdm(pollutants_to_train, desc="Pollutants", position=0):
-            print(f"\n{'='*80}")
-            print(f"POLLUTANT: {pollutant}")
-            print(f"{'='*80}")
+        for pollutant in tqdm(pollutants_to_train, desc='Pollutants', position=0):
+            print(f'\n{"=" * 80}')
+            print(f'POLLUTANT: {pollutant}')
+            print(f'{"=" * 80}')
 
             y = y_dict[pollutant]
             pollutant_results = {}
 
             for model_name, model in tqdm(
-                models.items(),
-                desc=f"  Models for {pollutant}",
-                position=1,
-                leave=False
+                models.items(), desc=f'  Models for {pollutant}', position=1, leave=False
             ):
-                print(f"\n  Model: {model_name}")
-                print(f"  {'-'*76}")
+                print(f'\n  Model: {model_name}')
+                print(f'  {"-" * 76}')
 
                 try:
                     # Get custom param grid if specified
@@ -137,45 +133,51 @@ class BatchTrainer:
 
                     # Run nested CV
                     cv_results = nested_cv.run_nested_cv(
-                        X, y, model, self.feature_groups, groups, param_grid
+                        X,
+                        y,
+                        model,
+                        self.feature_groups,
+                        groups,
+                        param_grid,  # type: ignore
                     )
 
                     pollutant_results[model_name] = cv_results
 
                     # Add to results
-                    results.append({
-                        'pollutant': pollutant,
-                        'model_name': model_name,
-                        'mean_r2': cv_results['mean_metrics']['r2'],
-                        'std_r2': cv_results['std_metrics']['r2'],
-                        'mean_rmse': cv_results['mean_metrics']['rmse'],
-                        'std_rmse': cv_results['std_metrics']['rmse'],
-                        'mean_mae': cv_results['mean_metrics']['mae'],
-                        'std_mae': cv_results['std_metrics']['mae'],
-                        'n_folds': cv_results['n_successful_folds'],
-                    })
+                    results.append(
+                        {
+                            'pollutant': pollutant,
+                            'model_name': model_name,
+                            'mean_r2': cv_results['mean_metrics']['r2'],
+                            'std_r2': cv_results['std_metrics']['r2'],
+                            'mean_rmse': cv_results['mean_metrics']['rmse'],
+                            'std_rmse': cv_results['std_metrics']['rmse'],
+                            'mean_mae': cv_results['mean_metrics']['mae'],
+                            'std_mae': cv_results['std_metrics']['mae'],
+                            'n_folds': cv_results['n_successful_folds'],
+                        }
+                    )
 
                 except Exception as e:
-                    print(f"\n  ERROR training {model_name} for {pollutant}: {str(e)}")
-                    print(f"  Skipping this model...\n")
+                    print(f'\n  ERROR training {model_name} for {pollutant}: {str(e)}')
+                    print('  Skipping this model...\n')
                     continue
 
             # Select best model for this pollutant
             if len(pollutant_results) > 0:
                 best_model_name = max(
-                    pollutant_results,
-                    key=lambda m: pollutant_results[m]['mean_metrics']['r2']
+                    pollutant_results, key=lambda m: pollutant_results[m]['mean_metrics']['r2']
                 )
 
-                print(f"\n  {'='*76}")
-                print(f"  BEST MODEL for {pollutant}: {best_model_name}")
-                print(f"  R² = {pollutant_results[best_model_name]['mean_metrics']['r2']:.4f}")
-                print(f"  {'='*76}\n")
+                print(f'\n  {"=" * 76}')
+                print(f'  BEST MODEL for {pollutant}: {best_model_name}')
+                print(f'  R² = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}')
+                print(f'  {"=" * 76}\n')
 
                 # Mark best model
                 for r in results:
                     if r['pollutant'] == pollutant:
-                        r['best_model'] = (r['model_name'] == best_model_name)
+                        r['best_model'] = r['model_name'] == best_model_name
 
             # Store detailed results
             detailed_results[pollutant] = pollutant_results
@@ -209,15 +211,15 @@ class BatchTrainer:
         # Generate summary report
         self._generate_report(results_df, output_path)
 
-        print(f"\n{'='*80}")
-        print("BATCH TRAINING COMPLETE")
-        print(f"{'='*80}")
-        print(f"Results saved to: {output_path}")
-        print(f"  - nested_cv_results.csv: Summary table")
-        print(f"  - detailed_results.json: Full fold-level results")
-        print(f"  - model_selection_report.txt: Human-readable report")
-        print(f"  - config.json: Training configuration")
-        print(f"{'='*80}\n")
+        print(f'\n{"=" * 80}')
+        print('BATCH TRAINING COMPLETE')
+        print(f'{"=" * 80}')
+        print(f'Results saved to: {output_path}')
+        print('  - nested_cv_results.csv: Summary table')
+        print('  - detailed_results.json: Full fold-level results')
+        print('  - model_selection_report.txt: Human-readable report')
+        print('  - config.json: Training configuration')
+        print(f'{"=" * 80}\n')
 
         return results_df
 
@@ -231,14 +233,14 @@ class BatchTrainer:
         Returns:
             Tuple of (X, y_dict, groups)
         """
-        print(f"\n{'='*60}")
-        print("DATA PREPARATION")
-        print(f"{'='*60}")
+        print(f'\n{"=" * 60}')
+        print('DATA PREPARATION')
+        print(f'{"=" * 60}')
 
         # Extract targets
         target_cols = self.feature_groups['targets']
         y_dict = {col: df[col] for col in target_cols if col in df.columns}
-        print(f"Target pollutants available: {len(y_dict)}")
+        print(f'Target pollutants available: {len(y_dict)}')
 
         # Extract metadata columns
         metadata_cols = ['ID', 'Lon', 'Lat']
@@ -248,19 +250,19 @@ class BatchTrainer:
         feature_cols = [c for c in df.columns if c not in exclude_cols]
         X = df[feature_cols]
 
-        print(f"Features: {X.shape[1]} columns")
-        print(f"Samples: {X.shape[0]} rows")
+        print(f'Features: {X.shape[1]} columns')
+        print(f'Samples: {X.shape[0]} rows')
 
         # Generate spatial groups
         groups = SpatialGroupGenerator.generate_groups(df)
 
         # Validate groups
-        validation = SpatialGroupGenerator.validate_groups(df, groups)
+        validation = SpatialGroupGenerator.validate_groups(df, groups)  # type: ignore
         SpatialGroupGenerator.print_validation_report(validation)
 
         return X, y_dict, groups
 
-    def _get_models(self, grid_size: str) -> Dict:
+    def _get_models(self, grid_size: str) -> dict:
         """
         Get model instances.
 
@@ -276,7 +278,7 @@ class BatchTrainer:
             'XGBoost': XGBoostModel(),
         }
 
-    def _get_param_grid(self, model, grid_size: str) -> Optional[Dict]:
+    def _get_param_grid(self, model, grid_size: str) -> dict | None:
         """
         Get parameter grid based on size specification.
 
@@ -343,7 +345,7 @@ class BatchTrainer:
 
         return None  # Default to full grid
 
-    def _convert_results_to_json(self, detailed_results: Dict) -> Dict:
+    def _convert_results_to_json(self, detailed_results: dict):
         """
         Convert numpy types to JSON-serializable types.
 
@@ -353,6 +355,7 @@ class BatchTrainer:
         Returns:
             JSON-serializable dict
         """
+
         def convert_value(obj):
             if isinstance(obj, np.integer):
                 return int(obj)
@@ -380,48 +383,49 @@ class BatchTrainer:
         report_path = output_path / 'model_selection_report.txt'
 
         with open(report_path, 'w') as f:
-            f.write("="*80 + "\n")
-            f.write("NESTED SPATIAL CROSS-VALIDATION RESULTS\n")
-            f.write("Model Selection Report\n")
-            f.write("="*80 + "\n\n")
+            f.write('=' * 80 + '\n')
+            f.write('NESTED SPATIAL CROSS-VALIDATION RESULTS\n')
+            f.write('Model Selection Report\n')
+            f.write('=' * 80 + '\n\n')
 
-            f.write(f"Configuration:\n")
-            f.write(f"  Outer CV folds: {self.n_outer}\n")
-            f.write(f"  Inner CV folds: {self.n_inner}\n")
-            f.write(f"  Random state: {self.random_state}\n\n")
+            f.write('Configuration:\n')
+            f.write(f'  Outer CV folds: {self.n_outer}\n')
+            f.write(f'  Inner CV folds: {self.n_inner}\n')
+            f.write(f'  Random state: {self.random_state}\n\n')
 
-            f.write("="*80 + "\n")
-            f.write("RESULTS BY POLLUTANT\n")
-            f.write("="*80 + "\n\n")
+            f.write('=' * 80 + '\n')
+            f.write('RESULTS BY POLLUTANT\n')
+            f.write('=' * 80 + '\n\n')
 
             for pollutant in results_df['pollutant'].unique():
-                f.write(f"\n{pollutant}\n")
-                f.write("-"*80 + "\n\n")
+                f.write(f'\n{pollutant}\n')
+                f.write('-' * 80 + '\n\n')
 
-                pollutant_df = results_df[results_df['pollutant'] == pollutant].sort_values(
+                pollutant_df = results_df[results_df['pollutant'] == pollutant].sort_values(  # type: ignore
                     'mean_r2', ascending=False
                 )
 
                 for _, row in pollutant_df.iterrows():
-                    best_marker = " [BEST MODEL]" if row.get('best_model', False) else ""
-                    f.write(f"  {row['model_name']}{best_marker}\n")
-                    f.write(f"    R²   = {row['mean_r2']:.4f} ± {row['std_r2']:.4f}\n")
-                    f.write(f"    RMSE = {row['mean_rmse']:.4f} ± {row['std_rmse']:.4f}\n")
-                    f.write(f"    MAE  = {row['mean_mae']:.4f} ± {row['std_mae']:.4f}\n")
-                    f.write(f"    Folds = {row['n_folds']}/{self.n_outer}\n")
-                    f.write("\n")
+                    best_marker = ' [BEST MODEL]' if row.get('best_model', False) else ''
+                    f.write(f'  {row["model_name"]}{best_marker}\n')
+                    f.write(f'    R²   = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}\n')
+                    f.write(f'    RMSE = {row["mean_rmse"]:.4f} ± {row["std_rmse"]:.4f}\n')
+                    f.write(f'    MAE  = {row["mean_mae"]:.4f} ± {row["std_mae"]:.4f}\n')
+                    f.write(f'    Folds = {row["n_folds"]}/{self.n_outer}\n')
+                    f.write('\n')
 
-            f.write("\n" + "="*80 + "\n")
-            f.write("SUMMARY: BEST MODELS PER POLLUTANT\n")
-            f.write("="*80 + "\n\n")
+            f.write('\n' + '=' * 80 + '\n')
+            f.write('SUMMARY: BEST MODELS PER POLLUTANT\n')
+            f.write('=' * 80 + '\n\n')
 
-            best_models = results_df[results_df.get('best_model', False) == True]
+            best_models = results_df[results_df.get('best_model', False)]
             for _, row in best_models.iterrows():
-                f.write(f"{row['pollutant']:<20} {row['model_name']:<15} "
-                        f"R² = {row['mean_r2']:.4f}\n")
+                f.write(
+                    f'{row["pollutant"]:<20} {row["model_name"]:<15} R² = {row["mean_r2"]:.4f}\n'
+                )
 
-            f.write("\n" + "="*80 + "\n")
-            f.write("END OF REPORT\n")
-            f.write("="*80 + "\n")
+            f.write('\n' + '=' * 80 + '\n')
+            f.write('END OF REPORT\n')
+            f.write('=' * 80 + '\n')
 
-        print(f"\nReport saved to: {report_path}")
+        print(f'\nReport saved to: {report_path}')

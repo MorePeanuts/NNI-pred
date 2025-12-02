@@ -52,7 +52,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def fit(self, X, y):
+    def fit(self, X, y) -> 'BaseModel':
         """
         Fit the model.
 
@@ -66,7 +66,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self, X):
+    def predict(self, X) -> Any:
         """
         Make predictions.
 

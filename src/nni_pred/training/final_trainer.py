@@ -8,7 +8,6 @@ on the full dataset. These models will be used for SHAP analysis and final predi
 import pandas as pd
 import joblib
 from pathlib import Path
-from typing import Dict
 
 from ..preprocessing import get_feature_groups, CVCompatiblePreprocessingPipeline
 from ..models import ElasticNetModel, RandomForestModel, XGBoostModel
@@ -50,22 +49,22 @@ class FinalModelTrainer:
             cv_results_path: Path to nested_cv_results.csv
             output_dir: Directory to save final models
         """
-        print(f"\n{'='*80}")
-        print("FINAL MODEL TRAINING ON FULL DATASET")
-        print(f"{'='*80}\n")
+        print(f'\n{"=" * 80}')
+        print('FINAL MODEL TRAINING ON FULL DATASET')
+        print(f'{"=" * 80}\n')
 
         # Load data
-        print(f"Loading data from: {data_path}")
+        print(f'Loading data from: {data_path}')
         df = pd.read_csv(data_path)
-        print(f"Data shape: {df.shape}")
+        print(f'Data shape: {df.shape}')
 
         # Load CV results
-        print(f"\nLoading CV results from: {cv_results_path}")
+        print(f'\nLoading CV results from: {cv_results_path}')
         cv_results = pd.read_csv(cv_results_path)
 
         # Filter to best models only
-        best_models = cv_results[cv_results['best_model'] == True]
-        print(f"Best models to train: {len(best_models)}")
+        best_models = cv_results[cv_results['best_model']]
+        print(f'Best models to train: {len(best_models)}')
 
         # Prepare data
         target_cols = self.feature_groups['targets']
@@ -88,24 +87,24 @@ class FinalModelTrainer:
         output_path.mkdir(parents=True, exist_ok=True)
 
         # Train final models
-        print(f"\n{'='*80}")
-        print("TRAINING FINAL MODELS")
-        print(f"{'='*80}\n")
+        print(f'\n{"=" * 80}')
+        print('TRAINING FINAL MODELS')
+        print(f'{"=" * 80}\n')
 
         for idx, row in best_models.iterrows():
             pollutant = row['pollutant']
             model_name = row['model_name']
 
-            print(f"Training {model_name} for {pollutant}...")
-            print(f"{'-'*80}")
+            print(f'Training {model_name} for {pollutant}...')
+            print(f'{"-" * 80}')
 
             if pollutant not in y_dict:
-                print(f"  ERROR: Pollutant {pollutant} not found in data. Skipping...")
+                print(f'  ERROR: Pollutant {pollutant} not found in data. Skipping...')
                 continue
 
             try:
                 # Initialize model
-                model_class = model_classes[model_name]
+                model_class = model_classes[model_name]  # type: ignore
                 model = model_class()
 
                 # Fit preprocessing on FULL data
@@ -116,15 +115,19 @@ class FinalModelTrainer:
                 X_processed = preprocessor.fit_transform(X)
 
                 if self.verbose >= 1:
-                    print(f"  Preprocessed shape: {X_processed.shape}")
+                    print(f'  Preprocessed shape: {X_processed.shape}')
                     if hasattr(preprocessor, 'get_summary'):
                         summary = preprocessor.get_summary()
                         if 'grouped_pca' in summary:
                             pca_summary = summary['grouped_pca']
                             if 'group2_agro' in pca_summary:
-                                print(f"  Group2 PCA components: {pca_summary['group2_agro']['n_components']}")
+                                print(
+                                    f'  Group2 PCA components: {pca_summary["group2_agro"]["n_components"]}'
+                                )
                             if 'group3_socio' in pca_summary:
-                                print(f"  Group3 PCA components: {pca_summary['group3_socio']['n_components']}")
+                                print(
+                                    f'  Group3 PCA components: {pca_summary["group3_socio"]["n_components"]}'
+                                )
 
                 # Train model on full data
                 model.fit(X_processed, y_dict[pollutant])
@@ -151,29 +154,29 @@ class FinalModelTrainer:
                 save_path = output_path / f'{pollutant}_{model_name}.pkl'
                 joblib.dump(save_obj, save_path)
 
-                print(f"  ✓ Saved to: {save_path}")
-                print(f"  CV R² = {row['mean_r2']:.4f} ± {row['std_r2']:.4f}")
-                print(f"  Training samples: {len(X)}")
-                print(f"  Processed features: {X_processed.shape[1]}")
+                print(f'  ✓ Saved to: {save_path}')
+                print(f'  CV R² = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}')
+                print(f'  Training samples: {len(X)}')
+                print(f'  Processed features: {X_processed.shape[1]}')
                 print()
 
             except Exception as e:
-                print(f"  ERROR training {model_name} for {pollutant}: {str(e)}")
-                print(f"  Skipping this model...\n")
+                print(f'  ERROR training {model_name} for {pollutant}: {str(e)}')
+                print('  Skipping this model...\n')
                 continue
 
-        print(f"{'='*80}")
-        print("FINAL MODEL TRAINING COMPLETE")
-        print(f"{'='*80}")
-        print(f"Models saved to: {output_path}")
-        print(f"\nThese models can now be used for:")
-        print("  - SHAP analysis and interpretation")
-        print("  - Making predictions on new data")
-        print("  - Feature importance analysis")
-        print(f"{'='*80}\n")
+        print(f'{"=" * 80}')
+        print('FINAL MODEL TRAINING COMPLETE')
+        print(f'{"=" * 80}')
+        print(f'Models saved to: {output_path}')
+        print('\nThese models can now be used for:')
+        print('  - SHAP analysis and interpretation')
+        print('  - Making predictions on new data')
+        print('  - Feature importance analysis')
+        print(f'{"=" * 80}\n')
 
     @staticmethod
-    def load_final_model(model_path: str) -> Dict:
+    def load_final_model(model_path: str) -> dict:
         """
         Load a saved final model.
 
@@ -186,7 +189,7 @@ class FinalModelTrainer:
         return joblib.load(model_path)
 
     @staticmethod
-    def predict_with_final_model(model_dict: Dict, X_new: pd.DataFrame) -> pd.Series:
+    def predict_with_final_model(model_dict: dict, X_new: pd.DataFrame) -> pd.Series:
         """
         Make predictions using a loaded final model.
 

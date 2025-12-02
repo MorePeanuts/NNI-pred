@@ -2,7 +2,7 @@
   "n_outer": 5,
   "n_inner": 4,
   "random_state": 42,
-  "grid_size": "small",
+  "grid_size": "full",
   "n_samples": 159,
   "n_features": 98,
   "n_groups": 53,

@@ -14,7 +14,6 @@ import numpy as np
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-from typing import Dict, List
 
 from ..preprocessing import CVCompatiblePreprocessingPipeline
 from ..models.base import BaseModel
@@ -59,8 +58,8 @@ class NestedSpatialCV:
         model: BaseModel,
         feature_groups: dict,
         groups: np.ndarray,
-        param_grid: Dict = None,
-    ) -> Dict:
+        param_grid: dict | None = None,
+    ) -> dict:
         """
         Run nested CV for a single pollutant-model combination.
 
@@ -88,20 +87,18 @@ class NestedSpatialCV:
         outer_results = []
 
         if self.verbose >= 1:
-            print(f"\n{'='*60}")
-            print(f"Running Nested CV: {model.get_model_name()}")
-            print(f"{'='*60}")
-            print(f"Outer folds: {self.n_outer}, Inner folds: {self.n_inner}")
-            print(f"Hyperparameter combinations: {self._count_grid_combinations(param_grid)}")
-            print(f"{'='*60}\n")
+            print(f'\n{"=" * 60}')
+            print(f'Running Nested CV: {model.get_model_name()}')
+            print(f'{"=" * 60}')
+            print(f'Outer folds: {self.n_outer}, Inner folds: {self.n_inner}')
+            print(f'Hyperparameter combinations: {self._count_grid_combinations(param_grid)}')
+            print(f'{"=" * 60}\n')
 
         # Outer loop: Generalization evaluation
-        for fold_idx, (outer_train_idx, outer_test_idx) in enumerate(
-            outer_cv.split(X, y, groups)
-        ):
+        for fold_idx, (outer_train_idx, outer_test_idx) in enumerate(outer_cv.split(X, y, groups)):
             if self.verbose >= 1:
-                print(f"Outer Fold {fold_idx + 1}/{self.n_outer}")
-                print(f"{'-'*60}")
+                print(f'Outer Fold {fold_idx + 1}/{self.n_outer}')
+                print(f'{"-" * 60}')
 
             # Split data
             X_outer_train = X.iloc[outer_train_idx]
@@ -111,10 +108,10 @@ class NestedSpatialCV:
             groups_outer_train = groups[outer_train_idx]
 
             if self.verbose >= 2:
-                print(f"  Training samples: {len(X_outer_train)}")
-                print(f"  Test samples: {len(X_outer_test)}")
-                print(f"  Training groups: {len(np.unique(groups_outer_train))}")
-                print(f"  Test groups: {len(np.unique(groups[outer_test_idx]))}")
+                print(f'  Training samples: {len(X_outer_train)}')
+                print(f'  Test samples: {len(X_outer_test)}')
+                print(f'  Training groups: {len(np.unique(groups_outer_train))}')
+                print(f'  Test groups: {len(np.unique(groups[outer_test_idx]))}')
 
             # Create preprocessing pipeline
             preprocessor = CVCompatiblePreprocessingPipeline(
@@ -123,16 +120,12 @@ class NestedSpatialCV:
             )
 
             # Create sklearn Pipeline
-            pipeline = Pipeline([
-                ('preprocessor', preprocessor),
-                ('model', model.get_sklearn_model())
-            ])
+            pipeline = Pipeline(
+                [('preprocessor', preprocessor), ('model', model.get_sklearn_model())]
+            )
 
             # Prefix param names with 'model__' for pipeline
-            pipeline_param_grid = {
-                f'model__{k}': v
-                for k, v in param_grid.items()
-            }
+            pipeline_param_grid = {f'model__{k}': v for k, v in param_grid.items()}
 
             # Inner CV for hyperparameter tuning
             inner_cv = GroupKFold(n_splits=self.n_inner)
@@ -161,8 +154,7 @@ class NestedSpatialCV:
 
                 # Extract best params (remove 'model__' prefix)
                 best_params = {
-                    k.replace('model__', ''): v
-                    for k, v in grid_search.best_params_.items()
+                    k.replace('model__', ''): v for k, v in grid_search.best_params_.items()
                 }
 
                 fold_result = {
@@ -177,25 +169,25 @@ class NestedSpatialCV:
                 }
 
                 if self.verbose >= 1:
-                    print(f"  Results:")
-                    print(f"    R²   = {r2:.4f}")
-                    print(f"    RMSE = {rmse:.4f}")
-                    print(f"    MAE  = {mae:.4f}")
+                    print('  Results:')
+                    print(f'    R²   = {r2:.4f}')
+                    print(f'    RMSE = {rmse:.4f}')
+                    print(f'    MAE  = {mae:.4f}')
                     if self.verbose >= 2:
-                        print(f"    Best inner CV R² = {grid_search.best_score_:.4f}")
-                        print(f"    Best params: {best_params}")
+                        print(f'    Best inner CV R² = {grid_search.best_score_:.4f}')
+                        print(f'    Best params: {best_params}')
                     print()
 
                 outer_results.append(fold_result)
 
             except Exception as e:
-                print(f"\n  ERROR in Outer Fold {fold_idx + 1}: {str(e)}")
-                print(f"  Skipping this fold...\n")
+                print(f'\n  ERROR in Outer Fold {fold_idx + 1}: {str(e)}')
+                print('  Skipping this fold...\n')
                 continue
 
         # Check if we have any successful folds
         if len(outer_results) == 0:
-            raise ValueError("All outer folds failed. Cannot proceed.")
+            raise ValueError('All outer folds failed. Cannot proceed.')
 
         # Aggregate results
         metrics = ['r2', 'rmse', 'mae']
@@ -203,13 +195,13 @@ class NestedSpatialCV:
         std_metrics = {m: np.std([r[m] for r in outer_results]) for m in metrics}
 
         if self.verbose >= 1:
-            print(f"\n{'='*60}")
-            print(f"Nested CV Complete: {model.get_model_name()}")
-            print(f"{'='*60}")
-            print(f"Mean R²   = {mean_metrics['r2']:.4f} ± {std_metrics['r2']:.4f}")
-            print(f"Mean RMSE = {mean_metrics['rmse']:.4f} ± {std_metrics['rmse']:.4f}")
-            print(f"Mean MAE  = {mean_metrics['mae']:.4f} ± {std_metrics['mae']:.4f}")
-            print(f"{'='*60}\n")
+            print(f'\n{"=" * 60}')
+            print(f'Nested CV Complete: {model.get_model_name()}')
+            print(f'{"=" * 60}')
+            print(f'Mean R²   = {mean_metrics["r2"]:.4f} ± {std_metrics["r2"]:.4f}')
+            print(f'Mean RMSE = {mean_metrics["rmse"]:.4f} ± {std_metrics["rmse"]:.4f}')
+            print(f'Mean MAE  = {mean_metrics["mae"]:.4f} ± {std_metrics["mae"]:.4f}')
+            print(f'{"=" * 60}\n')
 
         return {
             'outer_fold_results': outer_results,
@@ -219,7 +211,7 @@ class NestedSpatialCV:
             'n_successful_folds': len(outer_results),
         }
 
-    def _count_grid_combinations(self, param_grid: Dict) -> int:
+    def _count_grid_combinations(self, param_grid: dict) -> int:
         """
         Count total hyperparameter combinations.
 
@@ -235,7 +227,7 @@ class NestedSpatialCV:
         return count
 
     @staticmethod
-    def compare_models(cv_results_list: List[Dict], model_names: List[str]) -> pd.DataFrame:
+    def compare_models(cv_results_list: list[dict], model_names: list[str]) -> pd.DataFrame:
         """
         Compare multiple models based on CV results.
 
@@ -248,17 +240,19 @@ class NestedSpatialCV:
         """
         comparison = []
 
-        for model_name, cv_results in zip(model_names, cv_results_list):
-            comparison.append({
-                'model': model_name,
-                'mean_r2': cv_results['mean_metrics']['r2'],
-                'std_r2': cv_results['std_metrics']['r2'],
-                'mean_rmse': cv_results['mean_metrics']['rmse'],
-                'std_rmse': cv_results['std_metrics']['rmse'],
-                'mean_mae': cv_results['mean_metrics']['mae'],
-                'std_mae': cv_results['std_metrics']['mae'],
-                'n_folds': cv_results['n_successful_folds'],
-            })
+        for model_name, cv_results in zip(model_names, cv_results_list, strict=False):
+            comparison.append(
+                {
+                    'model': model_name,
+                    'mean_r2': cv_results['mean_metrics']['r2'],
+                    'std_r2': cv_results['std_metrics']['r2'],
+                    'mean_rmse': cv_results['mean_metrics']['rmse'],
+                    'std_rmse': cv_results['std_metrics']['rmse'],
+                    'mean_mae': cv_results['mean_metrics']['mae'],
+                    'std_mae': cv_results['std_metrics']['mae'],
+                    'n_folds': cv_results['n_successful_folds'],
+                }
+            )
 
         df = pd.DataFrame(comparison)
 

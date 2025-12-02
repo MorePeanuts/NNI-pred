@@ -21,7 +21,7 @@ class SpatialGroupGenerator:
     """
 
     @staticmethod
-    def generate_groups(df: pd.DataFrame, lon_col: str = 'Lon', lat_col: str = 'Lat') -> np.ndarray:
+    def generate_groups(df: pd.DataFrame, lon_col: str = 'Lon', lat_col: str = 'Lat'):
         """
         Generate group IDs based on spatial location.
 
@@ -37,30 +37,26 @@ class SpatialGroupGenerator:
         locations = df[[lon_col, lat_col]].drop_duplicates().reset_index(drop=True)
 
         # Create mapping: (lon, lat) -> group_id
-        location_to_group = {
-            (row[lon_col], row[lat_col]): idx
-            for idx, row in locations.iterrows()
-        }
+        location_to_group = {(row[lon_col], row[lat_col]): idx for idx, row in locations.iterrows()}
 
         # Assign group to each sample
         groups = df.apply(
-            lambda row: location_to_group[(row[lon_col], row[lat_col])],
-            axis=1
+            lambda row: location_to_group[(row[lon_col], row[lat_col])], axis=1
         ).values
 
         # Print summary
-        n_groups = len(np.unique(groups))
+        n_groups = len(np.unique(groups))  # type: ignore
         n_samples = len(df)
         samples_per_group = n_samples / n_groups
 
-        print(f"\n{'='*60}")
-        print("Spatial Group Generation Summary")
-        print(f"{'='*60}")
-        print(f"Total samples: {n_samples}")
-        print(f"Unique spatial locations: {n_groups}")
-        print(f"Samples per location: {samples_per_group:.1f} (expect ~3.0 for 3 seasons)")
-        print(f"Group IDs range: 0 to {n_groups - 1}")
-        print(f"{'='*60}\n")
+        print(f'\n{"=" * 60}')
+        print('Spatial Group Generation Summary')
+        print(f'{"=" * 60}')
+        print(f'Total samples: {n_samples}')
+        print(f'Unique spatial locations: {n_groups}')
+        print(f'Samples per location: {samples_per_group:.1f} (expect ~3.0 for 3 seasons)')
+        print(f'Group IDs range: 0 to {n_groups - 1}')
+        print(f'{"=" * 60}\n')
 
         return groups
 
@@ -90,12 +86,11 @@ class SpatialGroupGenerator:
         if 'Season' in df.columns:
             seasons_per_group = {}
             for group_id in unique_groups:
-                group_seasons = df[groups == group_id]['Season'].unique()
+                group_seasons = df[groups == group_id]['Season'].unique()  # type: ignore
                 seasons_per_group[group_id] = sorted(group_seasons)
 
             groups_with_all_seasons = sum(
-                1 for seasons in seasons_per_group.values()
-                if len(seasons) == 3
+                1 for seasons in seasons_per_group.values() if len(seasons) == 3
             )
         else:
             seasons_per_group = None
@@ -106,7 +101,9 @@ class SpatialGroupGenerator:
             'samples_per_group': samples_per_group,
             'groups_with_3_samples': groups_with_3_samples,
             'groups_with_other_counts': groups_with_other,
-            'all_groups_have_3_seasons': groups_with_all_seasons == n_groups if seasons_per_group else None,
+            'all_groups_have_3_seasons': groups_with_all_seasons == n_groups
+            if seasons_per_group
+            else None,
             'valid': groups_with_3_samples == n_groups,
         }
 
@@ -120,25 +117,25 @@ class SpatialGroupGenerator:
         Args:
             validation: Dictionary from validate_groups()
         """
-        print(f"\n{'='*60}")
-        print("Spatial Group Validation Report")
-        print(f"{'='*60}")
-        print(f"Total spatial groups: {validation['n_groups']}")
-        print(f"Groups with 3 samples: {validation['groups_with_3_samples']}")
-        print(f"Groups with other counts: {validation['groups_with_other_counts']}")
+        print(f'\n{"=" * 60}')
+        print('Spatial Group Validation Report')
+        print(f'{"=" * 60}')
+        print(f'Total spatial groups: {validation["n_groups"]}')
+        print(f'Groups with 3 samples: {validation["groups_with_3_samples"]}')
+        print(f'Groups with other counts: {validation["groups_with_other_counts"]}')
 
         if validation['all_groups_have_3_seasons'] is not None:
-            status = "✓ PASS" if validation['all_groups_have_3_seasons'] else "✗ FAIL"
-            print(f"All groups have 3 seasons: {status}")
+            status = '✓ PASS' if validation['all_groups_have_3_seasons'] else '✗ FAIL'
+            print(f'All groups have 3 seasons: {status}')
 
-        overall_status = "✓ VALID" if validation['valid'] else "✗ INVALID"
-        print(f"\nOverall validation: {overall_status}")
-        print(f"{'='*60}\n")
+        overall_status = '✓ VALID' if validation['valid'] else '✗ INVALID'
+        print(f'\nOverall validation: {overall_status}')
+        print(f'{"=" * 60}\n')
 
         if not validation['valid']:
-            print("WARNING: Some groups do not have exactly 3 samples!")
-            print("This may indicate missing data or duplicate locations.")
-            print("Samples per group:")
+            print('WARNING: Some groups do not have exactly 3 samples!')
+            print('This may indicate missing data or duplicate locations.')
+            print('Samples per group:')
             for group_id, count in validation['samples_per_group'].items():
                 if count != 3:
-                    print(f"  Group {group_id}: {count} samples")
+                    print(f'  Group {group_id}: {count} samples')

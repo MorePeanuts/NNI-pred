@@ -17,7 +17,6 @@ from scipy import stats
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.decomposition import PCA
-from typing import Optional
 
 from .feature_groups import get_feature_groups
 
@@ -66,7 +65,8 @@ class CVCompatibleSkewnessTransformer(BaseEstimator, TransformerMixin):
         # Also check for one-hot encoded columns
         onehot_prefixes = ['Season_', 'Landuse_', 'Soil_landuse_']
         categorical_cols_in_data = [
-            col for col in X.columns
+            col
+            for col in X.columns
             if col in categorical_cols or any(col.startswith(prefix) for prefix in onehot_prefixes)
         ]
 
@@ -128,7 +128,7 @@ class CVCompatibleSkewnessTransformer(BaseEstimator, TransformerMixin):
             Dictionary with transformation details
         """
         if not hasattr(self, 'skewness_dict_'):
-            raise ValueError("Transformer has not been fitted yet")
+            raise ValueError('Transformer has not been fitted yet')
 
         summary = {
             'n_features_total': len(self.skewness_dict_),
@@ -136,8 +136,7 @@ class CVCompatibleSkewnessTransformer(BaseEstimator, TransformerMixin):
             'threshold': self.skewness_threshold,
             'high_skew_features': self.high_skew_features_,
             'skewness_values': {
-                feat: self.skewness_dict_[feat]
-                for feat in self.high_skew_features_
+                feat: self.skewness_dict_[feat] for feat in self.high_skew_features_
             },
         }
 
@@ -166,7 +165,7 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
 
     def __init__(
         self,
-        feature_groups: Optional[dict] = None,
+        feature_groups: dict | None = None,
         variance_threshold: float = 0.95,
     ):
         """
@@ -266,14 +265,15 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
         # 1. Categorical features
         if not self._categorical_already_encoded:
             cat_cols = self.feature_groups['categorical']
-            X_cat = self.categorical_encoder_.transform(X[cat_cols])
+            X_cat = self.categorical_encoder_.transform(X[cat_cols])  # type: ignore
             cat_feature_names = self._get_cat_feature_names()
-            X_cat_df = pd.DataFrame(X_cat, columns=cat_feature_names, index=X.index)
+            X_cat_df = pd.DataFrame(X_cat, columns=cat_feature_names, index=X.index)  # type: ignore
             transformed_parts.append(X_cat_df)
         else:
             # Extract one-hot encoded columns
             onehot_cols = [
-                col for col in X.columns
+                col
+                for col in X.columns
                 if any(col.startswith(f'{cat}_') for cat in self.feature_groups['categorical'])
             ]
             if len(onehot_cols) > 0:
@@ -284,38 +284,38 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             X_group1_scaled = self.group1_scaler_.transform(X[self._group1_cols])
             X_group1_df = pd.DataFrame(
                 X_group1_scaled,
-                columns=self._group1_cols,
-                index=X.index
+                columns=self._group1_cols,  # type: ignore
+                index=X.index,
             )
             transformed_parts.append(X_group1_df)
 
         # 3. Group2: Scale + PCA
         if self.group2_pca_ is not None and len(self._group2_cols) > 0:
-            X_group2_scaled = self.group2_scaler_.transform(X[self._group2_cols])
+            X_group2_scaled = self.group2_scaler_.transform(X[self._group2_cols])  # type: ignore
             X_group2_pca = self.group2_pca_.transform(X_group2_scaled)
             n_comp2 = X_group2_pca.shape[1]
             X_group2_df = pd.DataFrame(
                 X_group2_pca,
-                columns=[f'PC_Agro_{i+1}' for i in range(n_comp2)],
-                index=X.index
+                columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
+                index=X.index,
             )
             transformed_parts.append(X_group2_df)
 
         # 4. Group3: Scale + PCA
         if self.group3_pca_ is not None and len(self._group3_cols) > 0:
-            X_group3_scaled = self.group3_scaler_.transform(X[self._group3_cols])
+            X_group3_scaled = self.group3_scaler_.transform(X[self._group3_cols])  # type: ignore
             X_group3_pca = self.group3_pca_.transform(X_group3_scaled)
             n_comp3 = X_group3_pca.shape[1]
             X_group3_df = pd.DataFrame(
                 X_group3_pca,
-                columns=[f'PC_Socio_{i+1}' for i in range(n_comp3)],
-                index=X.index
+                columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
+                index=X.index,
             )
             transformed_parts.append(X_group3_df)
 
         # Concatenate all transformed parts
         if len(transformed_parts) == 0:
-            raise ValueError("No features were transformed")
+            raise ValueError('No features were transformed')
 
         return pd.concat(transformed_parts, axis=1)
 
@@ -342,7 +342,7 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             Dictionary with PCA statistics
         """
         if not hasattr(self, 'group2_pca_'):
-            raise ValueError("Transformer has not been fitted yet")
+            raise ValueError('Transformer has not been fitted yet')
 
         summary = {}
 
@@ -386,7 +386,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
     def __init__(
         self,
         model_type: str = 'tree',
-        feature_groups: Optional[dict] = None,
+        feature_groups: dict | None = None,
         skewness_threshold: float = 0.75,
         pca_variance: float = 0.95,
     ):
@@ -422,17 +422,12 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
 
         # Step 1: Skewness correction (only for linear models)
         if self.model_type == 'linear':
-            self.skewness_transformer_ = CVCompatibleSkewnessTransformer(
-                self.skewness_threshold
-            )
+            self.skewness_transformer_ = CVCompatibleSkewnessTransformer(self.skewness_threshold)
             self.skewness_transformer_.fit(X_current)
             X_current = self.skewness_transformer_.transform(X_current)
 
         # Step 2: Grouped PCA (all models)
-        self.grouped_pca_ = CVCompatibleGroupedPCA(
-            self.feature_groups,
-            self.pca_variance
-        )
+        self.grouped_pca_ = CVCompatibleGroupedPCA(self.feature_groups, self.pca_variance)
         self.grouped_pca_.fit(X_current)
 
         return self
@@ -452,12 +447,12 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
         # Step 1: Skewness correction (only for linear models)
         if self.model_type == 'linear':
             if not hasattr(self, 'skewness_transformer_'):
-                raise ValueError("Pipeline has not been fitted yet")
+                raise ValueError('Pipeline has not been fitted yet')
             X_current = self.skewness_transformer_.transform(X_current)
 
         # Step 2: Grouped PCA (all models)
         if not hasattr(self, 'grouped_pca_'):
-            raise ValueError("Pipeline has not been fitted yet")
+            raise ValueError('Pipeline has not been fitted yet')
         X_current = self.grouped_pca_.transform(X_current)
 
         return X_current
@@ -470,7 +465,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
             Dictionary with preprocessing details
         """
         if not hasattr(self, 'grouped_pca_'):
-            raise ValueError("Pipeline has not been fitted yet")
+            raise ValueError('Pipeline has not been fitted yet')
 
         summary = {
             'model_type': self.model_type,
