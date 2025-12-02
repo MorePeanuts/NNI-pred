@@ -14,6 +14,7 @@ This script implements the data preprocessing pipeline described in the research
    - Save the processed dataset to datasets/processed_data.csv
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -368,8 +369,11 @@ def main():
     # Step 1: Water-Soil Sample Matching with IDW aggregation
     merged_df = merge_water_soil_samples(soil_df, water_df, radius_km=30.0)
 
-    # Step 2: General Preprocessing (one-hot encoding and log transformation)
-    processed_df = apply_general_preprocessing(merged_df)
+    if args.preprocessing:
+        # Step 2: General Preprocessing (one-hot encoding and log transformation)
+        processed_df = apply_general_preprocessing(merged_df)
+    else:
+        processed_df = merged_df
 
     # Save processed dataset
     print(f'\n{"=" * 60}')
@@ -412,4 +416,13 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Apply KNN-IDW algorithm to connect soil samples and water samples.'
+    )
+    parser.add_argument(
+        '--preprocessing',
+        action='store_true',
+        help='Apply one-hot encoding and log transformation if true',
+    )
+    args = parser.parse_args()
     main()
