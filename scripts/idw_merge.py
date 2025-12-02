@@ -282,6 +282,58 @@ def merge_water_soil_samples(
     return merged_df
 
 
+def apply_one_hot_encoding(merged_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Apply one-hot encoding to categorical variables (Season, Landuse, Soil_landuse)
+    """
+    df = merged_df.copy()
+    print('\n1. One-hot encoding categorical variables...')
+    categorical_vars = ['Season', 'Landuse', 'Soil_landuse']
+
+    for var in categorical_vars:
+        if var in df.columns:
+            print(f'   - {var}: {df[var].nunique()} unique values')
+            # Create dummy variables
+            dummies = pd.get_dummies(df[var], prefix=var, drop_first=False)
+            # Drop original column and add dummy columns
+            df = df.drop(columns=[var])
+            df = pd.concat([df, dummies], axis=1)
+
+    return df
+
+
+def apply_log1p_transform(merged_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Apply log1p transform to target variables (11 pollutant concentrations)
+    """
+    df = merged_df.copy()
+    print('\n2. Log1p transforming target variables...')
+
+    # Water pollutants (target variables)
+    water_pollutants = [
+        'THIA',
+        'IMI',
+        'CLO',
+        'ACE',
+        'DIN',
+        'parentNNIs',
+        'IMI-UREA',
+        'DN-IMI',
+        'DM-ACE',
+        'CLO-UREA',
+        'mNNIs',
+    ]
+
+    transformed_count = 0
+    for pollutant in water_pollutants:
+        if pollutant in df.columns:
+            df[pollutant] = np.log1p(df[pollutant])
+            transformed_count += 1
+            print(f'   - {pollutant}: log1p transformed')
+
+    return df
+
+
 def apply_general_preprocessing(merged_df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply general data preprocessing:
@@ -369,11 +421,11 @@ def main():
     # Step 1: Water-Soil Sample Matching with IDW aggregation
     merged_df = merge_water_soil_samples(soil_df, water_df, radius_km=30.0)
 
-    if args.preprocessing:
-        # Step 2: General Preprocessing (one-hot encoding and log transformation)
-        processed_df = apply_general_preprocessing(merged_df)
-    else:
-        processed_df = merged_df
+    # Step 2: General Preprocessing (one-hot encoding)
+    processed_df = apply_one_hot_encoding(merged_df)
+
+    if args.log1p_transform:
+        processed_df = apply_log1p_transform(processed_df)
 
     # Save processed dataset
     print(f'\n{"=" * 60}')
@@ -420,9 +472,9 @@ if __name__ == '__main__':
         description='Apply KNN-IDW algorithm to connect soil samples and water samples.'
     )
     parser.add_argument(
-        '--preprocessing',
+        '--log1p-transform',
         action='store_true',
-        help='Apply one-hot encoding and log transformation if true',
+        help='Apply log1p transform to target variables',
     )
     args = parser.parse_args()
     main()

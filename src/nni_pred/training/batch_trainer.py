@@ -39,6 +39,8 @@ class BatchTrainer:
         n_inner: int = 4,
         random_state: int = 42,
         verbose: int = 1,
+        use_pca_for_tree: bool = True,
+        inverse_transform_targets: bool = True,
     ):
         """
         Initialize batch trainer.
@@ -48,11 +50,15 @@ class BatchTrainer:
             n_inner: Number of inner CV folds
             random_state: Random seed
             verbose: Verbosity level (0=silent, 1=normal, 2=detailed)
+            use_pca_for_tree: Whether to apply PCA for tree models (default: True)
+            inverse_transform_targets: Whether to apply inverse transformer to targets (default: True)
         """
         self.n_outer = n_outer
         self.n_inner = n_inner
         self.random_state = random_state
         self.verbose = verbose
+        self.use_pca_for_tree = use_pca_for_tree
+        self.inverse_transform_targets = inverse_transform_targets
         self.feature_groups = get_feature_groups()
 
     def train_all_combinations(
@@ -96,6 +102,7 @@ class BatchTrainer:
         print('Models per pollutant: 3 (ElasticNet, RandomForest, XGBoost)')
         print(f'Total combinations: {len(pollutants_to_train) * 3}')
         print(f'Grid size: {grid_size}')
+        print(f'PCA for tree models: {self.use_pca_for_tree}')
 
         # Initialize models with appropriate grid
         models = self._get_models(grid_size)
@@ -106,6 +113,7 @@ class BatchTrainer:
             n_inner=self.n_inner,
             random_state=self.random_state,
             verbose=self.verbose,
+            inverse_transform_targets=self.inverse_transform_targets,
         )
 
         # Results storage
@@ -139,6 +147,7 @@ class BatchTrainer:
                         self.feature_groups,
                         groups,
                         param_grid,  # type: ignore
+                        use_pca_for_tree=self.use_pca_for_tree,
                     )
 
                     pollutant_results[model_name] = cv_results
@@ -200,6 +209,8 @@ class BatchTrainer:
             'n_inner': self.n_inner,
             'random_state': self.random_state,
             'grid_size': grid_size,
+            'use_pca_for_tree': self.use_pca_for_tree,
+            'inverse_transform_targets': True,
             'n_samples': len(df),
             'n_features': X.shape[1],
             'n_groups': len(np.unique(groups)),

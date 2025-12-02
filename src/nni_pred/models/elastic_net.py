@@ -29,10 +29,10 @@ class ElasticNetModel(BaseModel):
         """
         return {
             'alpha': [0.001, 0.01, 0.1, 1.0, 10.0],  # Regularization strength
-            'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9],   # L1/L2 mix (1=Lasso, 0=Ridge)
-            'max_iter': [10000],                      # Maximum iterations
+            'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99],  # L1/L2 mix (1=Lasso, 0=Ridge)
+            'max_iter': [10000],  # Maximum iterations
         }
-        # Total combinations: 5 × 5 × 1 = 25
+        # Total combinations: 5 × 7 × 1 = 35
 
     def get_sklearn_model(self):
         """
@@ -79,7 +79,7 @@ class ElasticNetModel(BaseModel):
             Predicted values
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.predict(X)
 
     def get_coefficients(self):
@@ -90,5 +90,5 @@ class ElasticNetModel(BaseModel):
             Array of feature coefficients
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.coef_

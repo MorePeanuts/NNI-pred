@@ -167,6 +167,7 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
         self,
         feature_groups: dict | None = None,
         variance_threshold: float = 0.95,
+        apply_pca: bool = True,
     ):
         """
         Initialize transformer.
@@ -174,9 +175,11 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
         Args:
             feature_groups: Feature group definitions (if None, will use default)
             variance_threshold: Variance to retain in PCA
+            apply_pca: Whether to apply PCA to Group2/3 (if False, only scale)
         """
         self.feature_groups = feature_groups or get_feature_groups()
         self.variance_threshold = variance_threshold
+        self.apply_pca = apply_pca
 
     def fit(self, X: pd.DataFrame, y=None):
         """
@@ -215,7 +218,7 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             self.group1_scaler_ = None
             self._group1_cols = []
 
-        # 3. Group2: Scale + PCA
+        # 3. Group2: Scale + optional PCA
         group2_cols = self.feature_groups['group2_agro']
         group2_available = [col for col in group2_cols if col in X.columns]
 
@@ -223,15 +226,18 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             self.group2_scaler_ = StandardScaler()
             X_group2_scaled = self.group2_scaler_.fit_transform(X[group2_available])
 
-            self.group2_pca_ = PCA(n_components=self.variance_threshold, random_state=42)
-            self.group2_pca_.fit(X_group2_scaled)
+            if self.apply_pca:
+                self.group2_pca_ = PCA(n_components=self.variance_threshold, random_state=42)
+                self.group2_pca_.fit(X_group2_scaled)
+            else:
+                self.group2_pca_ = None
             self._group2_cols = group2_available
         else:
             self.group2_scaler_ = None
             self.group2_pca_ = None
             self._group2_cols = []
 
-        # 4. Group3: Scale + PCA
+        # 4. Group3: Scale + optional PCA
         group3_cols = self.feature_groups['group3_socio']
         group3_available = [col for col in group3_cols if col in X.columns]
 
@@ -239,8 +245,11 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             self.group3_scaler_ = StandardScaler()
             X_group3_scaled = self.group3_scaler_.fit_transform(X[group3_available])
 
-            self.group3_pca_ = PCA(n_components=self.variance_threshold, random_state=42)
-            self.group3_pca_.fit(X_group3_scaled)
+            if self.apply_pca:
+                self.group3_pca_ = PCA(n_components=self.variance_threshold, random_state=42)
+                self.group3_pca_.fit(X_group3_scaled)
+            else:
+                self.group3_pca_ = None
             self._group3_cols = group3_available
         else:
             self.group3_scaler_ = None
@@ -289,28 +298,48 @@ class CVCompatibleGroupedPCA(BaseEstimator, TransformerMixin):
             )
             transformed_parts.append(X_group1_df)
 
-        # 3. Group2: Scale + PCA
-        if self.group2_pca_ is not None and len(self._group2_cols) > 0:
+        # 3. Group2: Scale + optional PCA
+        if self.group2_scaler_ is not None and len(self._group2_cols) > 0:
             X_group2_scaled = self.group2_scaler_.transform(X[self._group2_cols])  # type: ignore
-            X_group2_pca = self.group2_pca_.transform(X_group2_scaled)
-            n_comp2 = X_group2_pca.shape[1]
-            X_group2_df = pd.DataFrame(
-                X_group2_pca,
-                columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
-                index=X.index,
-            )
+
+            if self.group2_pca_ is not None:
+                # Apply PCA
+                X_group2_pca = self.group2_pca_.transform(X_group2_scaled)
+                n_comp2 = X_group2_pca.shape[1]
+                X_group2_df = pd.DataFrame(
+                    X_group2_pca,
+                    columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
+                    index=X.index,
+                )
+            else:
+                # Just use scaled features (no PCA)
+                X_group2_df = pd.DataFrame(
+                    X_group2_scaled,
+                    columns=self._group2_cols,  # type: ignore
+                    index=X.index,
+                )
             transformed_parts.append(X_group2_df)
 
-        # 4. Group3: Scale + PCA
-        if self.group3_pca_ is not None and len(self._group3_cols) > 0:
+        # 4. Group3: Scale + optional PCA
+        if self.group3_scaler_ is not None and len(self._group3_cols) > 0:
             X_group3_scaled = self.group3_scaler_.transform(X[self._group3_cols])  # type: ignore
-            X_group3_pca = self.group3_pca_.transform(X_group3_scaled)
-            n_comp3 = X_group3_pca.shape[1]
-            X_group3_df = pd.DataFrame(
-                X_group3_pca,
-                columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
-                index=X.index,
-            )
+
+            if self.group3_pca_ is not None:
+                # Apply PCA
+                X_group3_pca = self.group3_pca_.transform(X_group3_scaled)
+                n_comp3 = X_group3_pca.shape[1]
+                X_group3_df = pd.DataFrame(
+                    X_group3_pca,
+                    columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
+                    index=X.index,
+                )
+            else:
+                # Just use scaled features (no PCA)
+                X_group3_df = pd.DataFrame(
+                    X_group3_scaled,
+                    columns=self._group3_cols,  # type: ignore
+                    index=X.index,
+                )
             transformed_parts.append(X_group3_df)
 
         # Concatenate all transformed parts
@@ -368,7 +397,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
     Unified preprocessing pipeline that adapts based on model type.
 
     For Elastic Net (linear):  Skewness correction → Grouped PCA
-    For RF/XGBoost (tree):     Grouped PCA only (no skewness correction)
+    For RF/XGBoost (tree):     Grouped PCA (optional) or just scaling
 
     Attributes:
         model_type: str
@@ -379,6 +408,8 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
             Threshold for skewness correction
         pca_variance: float
             Variance to retain in PCA
+        use_pca_for_tree: bool
+            Whether to apply PCA for tree models (default: True)
         skewness_transformer_: CVCompatibleSkewnessTransformer (fitted, if linear)
         grouped_pca_: CVCompatibleGroupedPCA (fitted)
     """
@@ -389,6 +420,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
         feature_groups: dict | None = None,
         skewness_threshold: float = 0.75,
         pca_variance: float = 0.95,
+        use_pca_for_tree: bool = True,
     ):
         """
         Initialize preprocessing pipeline.
@@ -398,6 +430,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
             feature_groups: Feature group definitions
             skewness_threshold: Threshold for skewness correction
             pca_variance: Variance to retain in PCA
+            use_pca_for_tree: Whether to apply PCA for tree models (default: True)
         """
         if model_type not in ['linear', 'tree']:
             raise ValueError(f"model_type must be 'linear' or 'tree', got {model_type}")
@@ -406,6 +439,7 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
         self.feature_groups = feature_groups or get_feature_groups()
         self.skewness_threshold = skewness_threshold
         self.pca_variance = pca_variance
+        self.use_pca_for_tree = use_pca_for_tree
 
     def fit(self, X: pd.DataFrame, y=None):
         """
@@ -426,8 +460,16 @@ class CVCompatiblePreprocessingPipeline(BaseEstimator, TransformerMixin):
             self.skewness_transformer_.fit(X_current)
             X_current = self.skewness_transformer_.transform(X_current)
 
-        # Step 2: Grouped PCA (all models)
-        self.grouped_pca_ = CVCompatibleGroupedPCA(self.feature_groups, self.pca_variance)
+        # Step 2: Grouped PCA
+        # For linear models: always use PCA
+        # For tree models: use PCA only if use_pca_for_tree=True
+        apply_pca = self.model_type == 'linear' or (self.model_type == 'tree' and self.use_pca_for_tree)
+
+        self.grouped_pca_ = CVCompatibleGroupedPCA(
+            self.feature_groups,
+            self.pca_variance,
+            apply_pca=apply_pca
+        )
         self.grouped_pca_.fit(X_current)
 
         return self

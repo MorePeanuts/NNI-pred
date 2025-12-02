@@ -36,6 +36,7 @@ class NestedSpatialCV:
         n_inner: int = 4,
         random_state: int = 42,
         verbose: int = 1,
+        inverse_transform_targets: bool = True,
     ):
         """
         Initialize nested CV orchestrator.
@@ -45,11 +46,15 @@ class NestedSpatialCV:
             n_inner: Number of inner CV folds (default: 4)
             random_state: Random seed for reproducibility
             verbose: Verbosity level (0=silent, 1=progress, 2=detailed)
+            inverse_transform_targets: Whether to apply expm1 inverse transform
+                to targets before computing metrics (default: True, because
+                targets are log1p transformed in preprocessing)
         """
         self.n_outer = n_outer
         self.n_inner = n_inner
         self.random_state = random_state
         self.verbose = verbose
+        self.inverse_transform_targets = inverse_transform_targets
 
     def run_nested_cv(
         self,
@@ -59,23 +64,25 @@ class NestedSpatialCV:
         feature_groups: dict,
         groups: np.ndarray,
         param_grid: dict | None = None,
+        use_pca_for_tree: bool = True,
     ) -> dict:
         """
         Run nested CV for a single pollutant-model combination.
 
         Args:
             X: Feature dataframe
-            y: Target series (single pollutant)
+            y: Target series (single pollutant, log1p transformed)
             model: Model instance (ElasticNetModel, RandomForestModel, etc.)
             feature_groups: Feature group definitions
             groups: Spatial group IDs
             param_grid: Optional custom parameter grid (if None, uses model's default)
+            use_pca_for_tree: Whether to apply PCA for tree models (default: True)
 
         Returns:
             Dictionary with:
             - 'outer_fold_results': List of dicts (5 folds)
-            - 'mean_metrics': Dict with mean R², RMSE, MAE
-            - 'std_metrics': Dict with std R², RMSE, MAE
+            - 'mean_metrics': Dict with mean R², RMSE, MAE (in original scale)
+            - 'std_metrics': Dict with std R², RMSE, MAE (in original scale)
             - 'best_params_per_fold': List of best params from each fold
         """
         # Get parameter grid
@@ -117,6 +124,7 @@ class NestedSpatialCV:
             preprocessor = CVCompatiblePreprocessingPipeline(
                 model_type=model.get_model_type(),
                 feature_groups=feature_groups,
+                use_pca_for_tree=use_pca_for_tree,
             )
 
             # Create sklearn Pipeline
@@ -147,10 +155,19 @@ class NestedSpatialCV:
                 # Evaluate on outer test set
                 y_pred = grid_search.predict(X_outer_test)
 
-                # Calculate metrics
+                # Inverse transform if targets were log1p transformed
+                if self.inverse_transform_targets:
+                    # Convert log-space predictions back to original scale
+                    y_test_original = np.expm1(y_outer_test)
+                    y_pred_original = np.expm1(y_pred)
+                else:
+                    y_test_original = y_outer_test
+                    y_pred_original = y_pred
+
+                # Calculate metrics in original scale
                 r2 = r2_score(y_outer_test, y_pred)
-                rmse = np.sqrt(mean_squared_error(y_outer_test, y_pred))
-                mae = mean_absolute_error(y_outer_test, y_pred)
+                rmse = np.sqrt(mean_squared_error(y_test_original, y_pred_original))
+                mae = mean_absolute_error(y_test_original, y_pred_original)
 
                 # Extract best params (remove 'model__' prefix)
                 best_params = {

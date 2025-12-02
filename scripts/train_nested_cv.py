@@ -23,10 +23,6 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-
-# Add src to path so we can import nni_pred
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
-
 from nni_pred.training import BatchTrainer, FinalModelTrainer
 
 
@@ -109,6 +105,18 @@ Grid sizes:
         help='Skip final model training on full dataset (only run CV)',
     )
 
+    parser.add_argument(
+        '--no-pca-for-tree',
+        action='store_true',
+        help='Disable PCA for tree models (RF/XGBoost). Only use standardization.',
+    )
+
+    parser.add_argument(
+        '--inverse-transform-targets',
+        action='store_true',
+        help='Inverse transform target variables (log1p)',
+    )
+
     return parser.parse_args()
 
 
@@ -151,6 +159,7 @@ def main():
     print(f'  Inner CV folds: {args.n_inner}')
     print(f'  Random state: {args.random_state}')
     print(f'  Verbose: {args.verbose}')
+    print(f'  PCA for tree models: {not args.no_pca_for_tree}')
 
     # Estimate time
     n_pollutants = 11 if args.pollutants == ['all'] else len(args.pollutants)
@@ -173,10 +182,12 @@ def main():
         n_inner=args.n_inner,
         random_state=args.random_state,
         verbose=args.verbose,
+        use_pca_for_tree=not args.no_pca_for_tree,
+        inverse_transform_targets=args.inverse_transform_targets,
     )
 
     try:
-        cv_results = trainer.train_all_combinations(
+        trainer.train_all_combinations(
             data_path=str(data_path),
             output_dir=str(output_dir),
             pollutants=args.pollutants,

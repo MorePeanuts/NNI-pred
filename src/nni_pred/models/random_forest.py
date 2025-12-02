@@ -28,11 +28,11 @@ class RandomForestModel(BaseModel):
             Dictionary with hyperparameter search space
         """
         return {
-            'n_estimators': [100, 200, 500],           # Number of trees
-            'max_depth': [10, 20, None],               # Tree depth
-            'min_samples_split': [2, 5, 10],           # Min samples to split
-            'min_samples_leaf': [1, 2, 4],             # Min samples per leaf
-            'max_features': ['sqrt', 'log2'],          # Features per split
+            'n_estimators': [100, 200, 500],  # Number of trees
+            'max_depth': [8, 15, 20],  # Tree depth
+            'min_samples_split': [5, 10, 15],  # Min samples to split
+            'min_samples_leaf': [2, 4, 6],  # Min samples per leaf
+            'max_features': ['sqrt', 'log2'],  # Features per split
         }
         # Total combinations: 3 × 3 × 3 × 3 × 2 = 162
 
@@ -84,7 +84,7 @@ class RandomForestModel(BaseModel):
             Predicted values
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.predict(X)
 
     def get_feature_importances(self):
@@ -95,5 +95,5 @@ class RandomForestModel(BaseModel):
             Array of feature importances (Gini importance)
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.feature_importances_

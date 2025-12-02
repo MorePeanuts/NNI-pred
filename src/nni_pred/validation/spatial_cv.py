@@ -76,7 +76,7 @@ class SpatialGroupGenerator:
 
         # Check samples per group
         unique_groups, counts = np.unique(groups, return_counts=True)
-        samples_per_group = dict(zip(unique_groups, counts))
+        samples_per_group = dict(zip(unique_groups, counts, strict=False))
 
         # Expected: 3 samples per group (3 seasons)
         groups_with_3_samples = sum(1 for count in counts if count == 3)
