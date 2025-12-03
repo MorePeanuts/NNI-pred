@@ -2,11 +2,23 @@
   "n_outer": 5,
   "n_inner": 4,
   "random_state": 42,
-  "grid_size": "full",
+  "grid_size": "small",
+  "use_pca_for_tree": true,
+  "inverse_transform_targets": true,
   "n_samples": 159,
   "n_features": 98,
   "n_groups": 53,
   "pollutants_trained": [
-    "THIA"
+    "THIA",
+    "IMI",
+    "CLO",
+    "ACE",
+    "DIN",
+    "parentNNIs",
+    "IMI-UREA",
+    "DN-IMI",
+    "DM-ACE",
+    "CLO-UREA",
+    "mNNIs"
   ]
 }

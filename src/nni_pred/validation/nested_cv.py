@@ -84,6 +84,8 @@ class NestedSpatialCV:
             - 'mean_metrics': Dict with mean R², RMSE, MAE (in original scale)
             - 'std_metrics': Dict with std R², RMSE, MAE (in original scale)
             - 'best_params_per_fold': List of best params from each fold
+            - 'oof_predictions_log': Out-of-fold predictions in log space (np.ndarray)
+            - 'oof_predictions_original': Out-of-fold predictions in original scale (np.ndarray)
         """
         # Get parameter grid
         if param_grid is None:
@@ -100,6 +102,10 @@ class NestedSpatialCV:
             print(f'Outer folds: {self.n_outer}, Inner folds: {self.n_inner}')
             print(f'Hyperparameter combinations: {self._count_grid_combinations(param_grid)}')
             print(f'{"=" * 60}\n')
+
+        # Initialize out-of-fold prediction arrays
+        oof_predictions_log = np.full(len(y), np.nan)  # Log-space predictions
+        oof_predictions_original = np.full(len(y), np.nan)  # Original-space predictions
 
         # Outer loop: Generalization evaluation
         for fold_idx, (outer_train_idx, outer_test_idx) in enumerate(outer_cv.split(X, y, groups)):
@@ -155,17 +161,24 @@ class NestedSpatialCV:
                 # Evaluate on outer test set
                 y_pred = grid_search.predict(X_outer_test)
 
+                # Save out-of-fold predictions
+                oof_predictions_log[outer_test_idx] = y_pred
+
                 # Inverse transform if targets were log1p transformed
                 if self.inverse_transform_targets:
                     # Convert log-space predictions back to original scale
                     y_test_original = np.expm1(y_outer_test)
                     y_pred_original = np.expm1(y_pred)
+                    oof_predictions_original[outer_test_idx] = y_pred_original
                 else:
                     y_test_original = y_outer_test
                     y_pred_original = y_pred
+                    oof_predictions_original[outer_test_idx] = y_pred
 
-                # Calculate metrics in original scale
+                # Calculate metrics
+                # R² is calculated in LOG SPACE (more stable for wide-range concentrations)
                 r2 = r2_score(y_outer_test, y_pred)
+                # RMSE and MAE are calculated in ORIGINAL SCALE (interpretable units)
                 rmse = np.sqrt(mean_squared_error(y_test_original, y_pred_original))
                 mae = mean_absolute_error(y_test_original, y_pred_original)
 
@@ -215,9 +228,9 @@ class NestedSpatialCV:
             print(f'\n{"=" * 60}')
             print(f'Nested CV Complete: {model.get_model_name()}')
             print(f'{"=" * 60}')
-            print(f'Mean R²   = {mean_metrics["r2"]:.4f} ± {std_metrics["r2"]:.4f}')
-            print(f'Mean RMSE = {mean_metrics["rmse"]:.4f} ± {std_metrics["rmse"]:.4f}')
-            print(f'Mean MAE  = {mean_metrics["mae"]:.4f} ± {std_metrics["mae"]:.4f}')
+            print(f'Mean R² (log space) = {mean_metrics["r2"]:.4f} ± {std_metrics["r2"]:.4f}')
+            print(f'Mean RMSE (original) = {mean_metrics["rmse"]:.4f} ± {std_metrics["rmse"]:.4f}')
+            print(f'Mean MAE (original)  = {mean_metrics["mae"]:.4f} ± {std_metrics["mae"]:.4f}')
             print(f'{"=" * 60}\n')
 
         return {
@@ -226,6 +239,8 @@ class NestedSpatialCV:
             'std_metrics': std_metrics,
             'best_params_per_fold': [r['best_params'] for r in outer_results],
             'n_successful_folds': len(outer_results),
+            'oof_predictions_log': oof_predictions_log,
+            'oof_predictions_original': oof_predictions_original,
         }
 
     def _count_grid_combinations(self, param_grid: dict) -> int:

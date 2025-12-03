@@ -3,6 +3,11 @@ NESTED SPATIAL CROSS-VALIDATION RESULTS
 Model Selection Report
 ================================================================================
 
+IMPORTANT NOTE:
+  - R² values are calculated in LOG SPACE (log1p transformed targets)
+  - RMSE and MAE values are in ORIGINAL SCALE (interpretable units)
+  - This approach is used due to wide-range pollutant concentrations
+
 Configuration:
   Outer CV folds: 5
   Inner CV folds: 4
@@ -17,29 +22,259 @@ THIA
 --------------------------------------------------------------------------------
 
   XGBoost [BEST MODEL]
-    R²   = 0.5377 ± 0.1383
-    RMSE = 1.3006 ± 0.1840
-    MAE  = 0.9585 ± 0.0708
-    Folds = 5/5
+    R² (log)     = 0.5387 ± 0.0887
+    RMSE (orig)  = 233.9411 ± 262.8687
+    MAE (orig)   = 93.9714 ± 65.0187
+    Folds        = 5/5
 
   ElasticNet
-    R²   = 0.4071 ± 0.1439
-    RMSE = 1.4769 ± 0.1856
-    MAE  = 1.1461 ± 0.1040
-    Folds = 5/5
+    R² (log)     = 0.3965 ± 0.1536
+    RMSE (orig)  = 253.7128 ± 259.4521
+    MAE (orig)   = 110.6683 ± 69.5579
+    Folds        = 5/5
 
   RandomForest
-    R²   = 0.3660 ± 0.1103
-    RMSE = 1.5286 ± 0.0570
-    MAE  = 1.1621 ± 0.0376
-    Folds = 5/5
+    R² (log)     = 0.3654 ± 0.1230
+    RMSE (orig)  = 250.8222 ± 256.3396
+    MAE (orig)   = 103.7940 ± 65.0940
+    Folds        = 5/5
+
+
+IMI
+--------------------------------------------------------------------------------
+
+  RandomForest [BEST MODEL]
+    R² (log)     = 0.3624 ± 0.1060
+    RMSE (orig)  = 100.0925 ± 85.8318
+    MAE (orig)   = 47.5704 ± 23.4054
+    Folds        = 5/5
+
+  XGBoost
+    R² (log)     = 0.3476 ± 0.2398
+    RMSE (orig)  = 102.2218 ± 84.0844
+    MAE (orig)   = 46.9193 ± 21.5918
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3344 ± 0.0797
+    RMSE (orig)  = 103.0006 ± 85.4584
+    MAE (orig)   = 50.7309 ± 24.0221
+    Folds        = 5/5
+
+
+CLO
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.4317 ± 0.1266
+    RMSE (orig)  = 135.9429 ± 26.1851
+    MAE (orig)   = 67.2831 ± 17.2582
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.4195 ± 0.1112
+    RMSE (orig)  = 144.8964 ± 21.7812
+    MAE (orig)   = 70.8543 ± 14.5751
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3583 ± 0.1515
+    RMSE (orig)  = 181.1298 ± 14.1899
+    MAE (orig)   = 87.4790 ± 11.8003
+    Folds        = 5/5
+
+
+ACE
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.3567 ± 0.0926
+    RMSE (orig)  = 12.6297 ± 4.6443
+    MAE (orig)   = 8.2132 ± 2.7294
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.3446 ± 0.0736
+    RMSE (orig)  = 12.2907 ± 4.7881
+    MAE (orig)   = 8.0136 ± 2.7584
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3041 ± 0.1770
+    RMSE (orig)  = 11.9422 ± 4.0881
+    MAE (orig)   = 7.8004 ± 2.0882
+    Folds        = 5/5
+
+
+DIN
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.5110 ± 0.1088
+    RMSE (orig)  = 1519.8453 ± 357.8663
+    MAE (orig)   = 580.5504 ± 173.0493
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.3991 ± 0.2145
+    RMSE (orig)  = 1630.2984 ± 431.2514
+    MAE (orig)   = 614.4468 ± 207.1667
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.0239 ± 0.5089
+    RMSE (orig)  = 1814.0778 ± 404.7557
+    MAE (orig)   = 715.7176 ± 191.0098
+    Folds        = 5/5
+
+
+parentNNIs
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.4360 ± 0.1621
+    RMSE (orig)  = 1635.5927 ± 485.2380
+    MAE (orig)   = 753.4393 ± 225.5131
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.2534 ± 0.1896
+    RMSE (orig)  = 1778.2009 ± 529.0054
+    MAE (orig)   = 810.7787 ± 252.2301
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.0777 ± 0.2267
+    RMSE (orig)  = 1915.2747 ± 549.7389
+    MAE (orig)   = 901.2250 ± 276.7602
+    Folds        = 5/5
+
+
+IMI-UREA
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.4258 ± 0.1351
+    RMSE (orig)  = 15.0233 ± 4.4784
+    MAE (orig)   = 9.6914 ± 2.1001
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.4036 ± 0.1109
+    RMSE (orig)  = 15.5814 ± 4.5088
+    MAE (orig)   = 10.2802 ± 2.2240
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3404 ± 0.0936
+    RMSE (orig)  = 17.2396 ± 4.0613
+    MAE (orig)   = 11.3856 ± 1.9915
+    Folds        = 5/5
+
+
+DN-IMI
+--------------------------------------------------------------------------------
+
+  RandomForest [BEST MODEL]
+    R² (log)     = 0.4122 ± 0.1130
+    RMSE (orig)  = 377.7531 ± 251.3812
+    MAE (orig)   = 156.5852 ± 84.5912
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3875 ± 0.0875
+    RMSE (orig)  = 547.5215 ± 88.9517
+    MAE (orig)   = 210.4272 ± 43.1052
+    Folds        = 5/5
+
+  XGBoost
+    R² (log)     = 0.3620 ± 0.1613
+    RMSE (orig)  = 367.3176 ± 239.5898
+    MAE (orig)   = 151.6174 ± 75.5436
+    Folds        = 5/5
+
+
+DM-ACE
+--------------------------------------------------------------------------------
+
+  RandomForest [BEST MODEL]
+    R² (log)     = 0.3588 ± 0.1361
+    RMSE (orig)  = 0.7851 ± 0.3404
+    MAE (orig)   = 0.4470 ± 0.1242
+    Folds        = 5/5
+
+  XGBoost
+    R² (log)     = 0.3144 ± 0.2076
+    RMSE (orig)  = 0.7685 ± 0.3467
+    MAE (orig)   = 0.4077 ± 0.1263
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.1375 ± 0.1252
+    RMSE (orig)  = 0.8993 ± 0.3294
+    MAE (orig)   = 0.5235 ± 0.1274
+    Folds        = 5/5
+
+
+CLO-UREA
+--------------------------------------------------------------------------------
+
+  RandomForest [BEST MODEL]
+    R² (log)     = 0.3999 ± 0.0184
+    RMSE (orig)  = 127.2798 ± 52.9074
+    MAE (orig)   = 57.7935 ± 16.1018
+    Folds        = 5/5
+
+  XGBoost
+    R² (log)     = 0.3306 ± 0.0665
+    RMSE (orig)  = 123.4475 ± 50.3273
+    MAE (orig)   = 56.0579 ± 14.0360
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.3232 ± 0.0406
+    RMSE (orig)  = 143.5958 ± 48.6477
+    MAE (orig)   = 65.6455 ± 15.0555
+    Folds        = 5/5
+
+
+mNNIs
+--------------------------------------------------------------------------------
+
+  XGBoost [BEST MODEL]
+    R² (log)     = 0.5003 ± 0.1426
+    RMSE (orig)  = 534.8306 ± 266.3701
+    MAE (orig)   = 237.0821 ± 78.2608
+    Folds        = 5/5
+
+  RandomForest
+    R² (log)     = 0.4665 ± 0.1073
+    RMSE (orig)  = 543.4831 ± 272.9703
+    MAE (orig)   = 239.4672 ± 83.8696
+    Folds        = 5/5
+
+  ElasticNet
+    R² (log)     = 0.4129 ± 0.1389
+    RMSE (orig)  = 536.6620 ± 265.0480
+    MAE (orig)   = 239.9612 ± 74.9812
+    Folds        = 5/5
 
 
 ================================================================================
 SUMMARY: BEST MODELS PER POLLUTANT
 ================================================================================
 
-THIA                 XGBoost         R² = 0.5377
+THIA                 XGBoost         R² (log) = 0.5387
+IMI                  RandomForest    R² (log) = 0.3624
+CLO                  XGBoost         R² (log) = 0.4317
+ACE                  XGBoost         R² (log) = 0.3567
+DIN                  XGBoost         R² (log) = 0.5110
+parentNNIs           XGBoost         R² (log) = 0.4360
+IMI-UREA             XGBoost         R² (log) = 0.4258
+DN-IMI               RandomForest    R² (log) = 0.4122
+DM-ACE               RandomForest    R² (log) = 0.3588
+CLO-UREA             RandomForest    R² (log) = 0.3999
+mNNIs                XGBoost         R² (log) = 0.5003
 
 ================================================================================
 END OF REPORT

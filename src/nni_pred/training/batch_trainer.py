@@ -119,6 +119,7 @@ class BatchTrainer:
         # Results storage
         results = []
         detailed_results = {}
+        oof_predictions = {}  # Store OOF predictions for visualization
 
         # Train all combinations
         for pollutant in tqdm(pollutants_to_train, desc='Pollutants', position=0):
@@ -128,6 +129,7 @@ class BatchTrainer:
 
             y = y_dict[pollutant]
             pollutant_results = {}
+            pollutant_oof_preds = {}  # Store OOF predictions for this pollutant
 
             for model_name, model in tqdm(
                 models.items(), desc=f'  Models for {pollutant}', position=1, leave=False
@@ -151,6 +153,12 @@ class BatchTrainer:
                     )
 
                     pollutant_results[model_name] = cv_results
+
+                    # Store OOF predictions (both log and original scale)
+                    pollutant_oof_preds[model_name] = {
+                        'log': cv_results['oof_predictions_log'],
+                        'original': cv_results['oof_predictions_original'],
+                    }
 
                     # Add to results
                     results.append(
@@ -180,7 +188,7 @@ class BatchTrainer:
 
                 print(f'\n  {"=" * 76}')
                 print(f'  BEST MODEL for {pollutant}: {best_model_name}')
-                print(f'  R² = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}')
+                print(f'  R² (log space) = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}')
                 print(f'  {"=" * 76}\n')
 
                 # Mark best model
@@ -190,6 +198,14 @@ class BatchTrainer:
 
             # Store detailed results
             detailed_results[pollutant] = pollutant_results
+
+            # Store OOF predictions (including best model indicator)
+            if len(pollutant_results) > 0:
+                oof_predictions[pollutant] = {
+                    'true_values': y.values,  # Log-transformed true values
+                    'predictions': pollutant_oof_preds,  # Dict of model predictions (original scale)
+                    'best_model': best_model_name,
+                }
 
         # Save results
         output_path = Path(output_dir)
@@ -222,6 +238,9 @@ class BatchTrainer:
         # Generate summary report
         self._generate_report(results_df, output_path)
 
+        # Save out-of-fold predictions for visualization
+        self._save_oof_predictions(oof_predictions, df, output_path)
+
         print(f'\n{"=" * 80}')
         print('BATCH TRAINING COMPLETE')
         print(f'{"=" * 80}')
@@ -230,6 +249,7 @@ class BatchTrainer:
         print('  - detailed_results.json: Full fold-level results')
         print('  - model_selection_report.txt: Human-readable report')
         print('  - config.json: Training configuration')
+        print('  - oof_predictions.csv: Out-of-fold predictions for visualization')
         print(f'{"=" * 80}\n')
 
         return results_df
@@ -399,6 +419,11 @@ class BatchTrainer:
             f.write('Model Selection Report\n')
             f.write('=' * 80 + '\n\n')
 
+            f.write('IMPORTANT NOTE:\n')
+            f.write('  - R² values are calculated in LOG SPACE (log1p transformed targets)\n')
+            f.write('  - RMSE and MAE values are in ORIGINAL SCALE (interpretable units)\n')
+            f.write('  - This approach is used due to wide-range pollutant concentrations\n\n')
+
             f.write('Configuration:\n')
             f.write(f'  Outer CV folds: {self.n_outer}\n')
             f.write(f'  Inner CV folds: {self.n_inner}\n')
@@ -419,10 +444,10 @@ class BatchTrainer:
                 for _, row in pollutant_df.iterrows():
                     best_marker = ' [BEST MODEL]' if row.get('best_model', False) else ''
                     f.write(f'  {row["model_name"]}{best_marker}\n')
-                    f.write(f'    R²   = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}\n')
-                    f.write(f'    RMSE = {row["mean_rmse"]:.4f} ± {row["std_rmse"]:.4f}\n')
-                    f.write(f'    MAE  = {row["mean_mae"]:.4f} ± {row["std_mae"]:.4f}\n')
-                    f.write(f'    Folds = {row["n_folds"]}/{self.n_outer}\n')
+                    f.write(f'    R² (log)     = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}\n')
+                    f.write(f'    RMSE (orig)  = {row["mean_rmse"]:.4f} ± {row["std_rmse"]:.4f}\n')
+                    f.write(f'    MAE (orig)   = {row["mean_mae"]:.4f} ± {row["std_mae"]:.4f}\n')
+                    f.write(f'    Folds        = {row["n_folds"]}/{self.n_outer}\n')
                     f.write('\n')
 
             f.write('\n' + '=' * 80 + '\n')
@@ -432,7 +457,7 @@ class BatchTrainer:
             best_models = results_df[results_df.get('best_model', False)]
             for _, row in best_models.iterrows():
                 f.write(
-                    f'{row["pollutant"]:<20} {row["model_name"]:<15} R² = {row["mean_r2"]:.4f}\n'
+                    f'{row["pollutant"]:<20} {row["model_name"]:<15} R² (log) = {row["mean_r2"]:.4f}\n'
                 )
 
             f.write('\n' + '=' * 80 + '\n')
@@ -440,3 +465,73 @@ class BatchTrainer:
             f.write('=' * 80 + '\n')
 
         print(f'\nReport saved to: {report_path}')
+
+    def _save_oof_predictions(
+        self, oof_predictions: dict, df: pd.DataFrame, output_path: Path
+    ):
+        """
+        Save out-of-fold predictions for visualization.
+
+        Creates a CSV file with columns:
+        - ID, Lon, Lat, Season
+        - For each pollutant: <pollutant>_true, <pollutant>_pred_<model>, <pollutant>_pred_best
+
+        Args:
+            oof_predictions: Dict with OOF predictions per pollutant
+            df: Original dataframe with metadata
+            output_path: Directory to save predictions
+        """
+        if len(oof_predictions) == 0:
+            print('\n  WARNING: No OOF predictions to save')
+            return
+
+        print('\n  Saving out-of-fold predictions for visualization...')
+
+        # Start with metadata columns
+        metadata_cols = ['ID', 'Lon', 'Lat']
+        oof_df = df[metadata_cols].copy()
+
+        # Recover Season from one-hot encoded columns
+        if 'Season' in df.columns:
+            oof_df['Season'] = df['Season']
+        else:
+            # Season was one-hot encoded, recover it
+            season_cols = ['Season_Dry', 'Season_Normal', 'Season_Rainy']
+            if all(col in df.columns for col in season_cols):
+                season_map = {
+                    'Season_Dry': 'Dry',
+                    'Season_Normal': 'Normal',
+                    'Season_Rainy': 'Rainy',
+                }
+                # Find which season column is 1 for each row
+                oof_df['Season'] = df[season_cols].idxmax(axis=1).map(season_map)
+            else:
+                print('  WARNING: Cannot recover Season column, setting to "Unknown"')
+                oof_df['Season'] = 'Unknown'
+
+        # Add predictions for each pollutant
+        for pollutant, pred_data in oof_predictions.items():
+            # True values (both log and original scale)
+            true_values_log = pred_data['true_values']
+            true_values_original = np.expm1(true_values_log)
+
+            oof_df[f'{pollutant}_true_log'] = true_values_log
+            oof_df[f'{pollutant}_true'] = true_values_original
+
+            # Predictions from each model (both log and original scale)
+            for model_name, pred_dict in pred_data['predictions'].items():
+                oof_df[f'{pollutant}_pred_{model_name}_log'] = pred_dict['log']
+                oof_df[f'{pollutant}_pred_{model_name}'] = pred_dict['original']
+
+            # Best model prediction
+            best_model = pred_data['best_model']
+            oof_df[f'{pollutant}_pred_best_log'] = pred_data['predictions'][best_model]['log']
+            oof_df[f'{pollutant}_pred_best'] = pred_data['predictions'][best_model]['original']
+            oof_df[f'{pollutant}_best_model'] = best_model
+
+        # Save to CSV
+        oof_path = output_path / 'oof_predictions.csv'
+        oof_df.to_csv(oof_path, index=False)
+
+        print(f'  Out-of-fold predictions saved to: {oof_path}')
+        print(f'  Shape: {oof_df.shape}')

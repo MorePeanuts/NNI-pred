@@ -80,8 +80,8 @@ def plot_cv_metrics(
 
     ax1.set_yticks(y_pos)
     ax1.set_yticklabels(y_labels, fontsize=10)
-    ax1.set_xlabel('R² Score', fontsize=12, fontweight='bold')
-    ax1.set_title(f'R² Score{title_suffix}', fontsize=13, fontweight='bold')
+    ax1.set_xlabel('R² Score (log space)', fontsize=12, fontweight='bold')
+    ax1.set_title(f'R² Score (log){title_suffix}', fontsize=13, fontweight='bold')
     ax1.grid(axis='x', alpha=0.3, linestyle='--')
     ax1.axvline(x=0, color='black', linewidth=0.8)
 
@@ -107,8 +107,8 @@ def plot_cv_metrics(
 
     ax2.set_yticks(y_pos)
     ax2.set_yticklabels([])  # Hide y-axis labels (already shown in left plot)
-    ax2.set_xlabel('RMSE', fontsize=12, fontweight='bold')
-    ax2.set_title(f'RMSE{title_suffix}', fontsize=13, fontweight='bold')
+    ax2.set_xlabel('RMSE (original scale)', fontsize=12, fontweight='bold')
+    ax2.set_title(f'RMSE (original){title_suffix}', fontsize=13, fontweight='bold')
     ax2.grid(axis='x', alpha=0.3, linestyle='--')
     ax2.axvline(x=0, color='black', linewidth=0.8)
 
@@ -134,8 +134,8 @@ def plot_cv_metrics(
 
     ax3.set_yticks(y_pos)
     ax3.set_yticklabels([])  # Hide y-axis labels
-    ax3.set_xlabel('MAE', fontsize=12, fontweight='bold')
-    ax3.set_title(f'MAE{title_suffix}', fontsize=13, fontweight='bold')
+    ax3.set_xlabel('MAE (original scale)', fontsize=12, fontweight='bold')
+    ax3.set_title(f'MAE (original){title_suffix}', fontsize=13, fontweight='bold')
     ax3.grid(axis='x', alpha=0.3, linestyle='--')
     ax3.axvline(x=0, color='black', linewidth=0.8)
 

@@ -24,6 +24,11 @@ import argparse
 import sys
 from pathlib import Path
 from nni_pred.training import BatchTrainer, FinalModelTrainer
+from nni_pred.visualization import (
+    plot_cv_metrics,
+    plot_individual_pollutants_grid,
+    plot_total_pollutants_grid,
+)
 
 
 def parse_args():
@@ -115,6 +120,12 @@ Grid sizes:
         '--inverse-transform-targets',
         action='store_true',
         help='Inverse transform target variables (log1p)',
+    )
+
+    parser.add_argument(
+        '--skip-visualization',
+        action='store_true',
+        help='Skip generating visualization plots after training',
     )
 
     return parser.parse_args()
@@ -236,6 +247,54 @@ def main():
             traceback.print_exc()
             sys.exit(1)
 
+    # Step 3: Visualization
+    if not args.skip_visualization:
+        print(f'\n{"=" * 80}')
+        print('STEP 3: GENERATING VISUALIZATIONS')
+        print(f'{"=" * 80}\n')
+
+        figures_dir = output_dir / 'figures'
+        figures_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # 1. CV Metrics Comparison
+            print('  Generating CV metrics comparison plot...')
+            plot_cv_metrics(
+                cv_results_path=str(output_dir / 'nested_cv_results.csv'),
+                output_path=str(figures_dir / 'cv_metrics_comparison.png'),
+                show_std=True,
+                best_only=True,
+            )
+
+            # 2. Prediction Scatter Plot - Individual Pollutants (3×3 grid)
+            print('  Generating prediction scatter plot (individual pollutants)...')
+            plot_individual_pollutants_grid(
+                oof_predictions_path=str(output_dir / 'oof_predictions.csv'),
+                output_path=str(figures_dir / 'prediction_scatter_individual.png'),
+            )
+
+            # 3. Prediction Scatter Plot - Total Pollutants (1×2 grid)
+            print('  Generating prediction scatter plot (total pollutants)...')
+            plot_total_pollutants_grid(
+                oof_predictions_path=str(output_dir / 'oof_predictions.csv'),
+                output_path=str(figures_dir / 'prediction_scatter_total.png'),
+            )
+
+            print(f'\n{"=" * 80}')
+            print('STEP 3 COMPLETE')
+            print(f'{"=" * 80}')
+            print('\nVisualization plots saved to:')
+            print(f'  {figures_dir / "cv_metrics_comparison.png"}')
+            print(f'  {figures_dir / "prediction_scatter_individual.png"}')
+            print(f'  {figures_dir / "prediction_scatter_total.png"}')
+
+        except Exception as e:
+            print(f'\nWARNING: Error during visualization: {str(e)}')
+            print('Continuing without visualization...')
+            import traceback
+
+            traceback.print_exc()
+
     # Final summary
     print(f'\n{"=" * 80}')
     print('TRAINING PIPELINE COMPLETE!')
@@ -245,17 +304,22 @@ def main():
     print(f'  CV results: {output_dir / "nested_cv_results.csv"}')
     print(f'  Detailed results: {output_dir / "detailed_results.json"}')
     print(f'  Report: {output_dir / "model_selection_report.txt"}')
+    print(f'  OOF predictions: {output_dir / "oof_predictions.csv"}')
 
     if not args.skip_final_training:
         print(f'  Final models: {output_dir.parent / "final_models"}/')
 
+    if not args.skip_visualization:
+        print(f'  Figures: {output_dir / "figures"}/')
+
     print('\nNext steps:')
     print('  1. Review model_selection_report.txt')
     print('  2. Check cross-validation metrics (R², RMSE, MAE)')
+    print('  3. Examine visualization plots')
 
     if not args.skip_final_training:
-        print('  3. Use final models for SHAP analysis')
-        print('  4. Interpret feature importances')
+        print('  4. Use final models for SHAP analysis')
+        print('  5. Interpret feature importances')
 
     print(f'\n{"=" * 80}\n')
 
