@@ -1,0 +1,12 @@
+Pollutant,Category,Detection Rate (%),Detected Samples,Total Samples,Mean Concentration,Median Concentration,Std Concentration,Min Concentration,Max Concentration
+parentNNIs,Total,100.0,159,159,1070.806,380.2,1863.188,3.0,9024.6
+DIN,Parent Compound,97.48,155,159,726.194,76.6,1748.737,2.4,8758.0
+mNNIs,Total,94.34,150,159,367.884,118.2,685.485,2.0,5262.2
+IMI,Parent Compound,91.19,145,159,81.917,48.0,137.157,1.2,1441.0
+THIA,Parent Compound,84.91,135,159,172.533,55.0,393.063,3.2,4246.8
+ACE,Parent Compound,81.76,130,159,14.766,11.4,13.286,0.4,69.6
+CLO,Parent Compound,75.47,120,159,152.267,62.5,218.848,3.6,999.4
+CLO-UREA,Metabolite,68.55,109,159,112.483,50.4,165.525,2.2,1088.0
+IMI-UREA,Metabolite,59.75,95,159,25.067,22.6,16.595,2.2,82.0
+DN-IMI,Metabolite,58.49,93,159,338.215,181.4,585.161,4.6,3940.6
+DM-ACE,Metabolite,23.27,37,159,1.854,1.6,1.308,0.2,5.8
