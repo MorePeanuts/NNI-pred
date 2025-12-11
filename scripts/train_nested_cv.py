@@ -231,7 +231,7 @@ def main():
             final_trainer.train_final_models(
                 data_path=str(data_path),
                 cv_results_path=str(output_dir / 'nested_cv_results.csv'),
-                output_dir=str(output_dir.parent),
+                output_dir=str(output_dir),
             )
 
             print(f'\n{"=" * 80}')
