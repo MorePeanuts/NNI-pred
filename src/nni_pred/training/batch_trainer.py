@@ -165,12 +165,14 @@ class BatchTrainer:
                         {
                             'pollutant': pollutant,
                             'model_name': model_name,
+                            'mean_nse': cv_results['mean_metrics']['nse'],
+                            'std_nse': cv_results['std_metrics']['nse'],
                             'mean_r2': cv_results['mean_metrics']['r2'],
                             'std_r2': cv_results['std_metrics']['r2'],
                             'mean_rmse': cv_results['mean_metrics']['rmse'],
                             'std_rmse': cv_results['std_metrics']['rmse'],
-                            'mean_mae': cv_results['mean_metrics']['mae'],
-                            'std_mae': cv_results['std_metrics']['mae'],
+                            'mean_nrmse': cv_results['mean_metrics']['nrmse'],
+                            'std_nrmse': cv_results['std_metrics']['nrmse'],
                             'n_folds': cv_results['n_successful_folds'],
                         }
                     )
@@ -183,13 +185,13 @@ class BatchTrainer:
             # Select best model for this pollutant
             if len(pollutant_results) > 0:
                 best_model_name = max(
-                    pollutant_results, key=lambda m: pollutant_results[m]['mean_metrics']['r2']
+                    pollutant_results, key=lambda m: pollutant_results[m]['mean_metrics']['nse']
                 )
 
                 print(f'\n  {"=" * 76}')
                 print(f'  BEST MODEL for {pollutant}: {best_model_name}')
                 print(
-                    f'  R² (log space) = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}'
+                    f'  NSE (log space) = {pollutant_results[best_model_name]["mean_metrics"]["nse"]:.4f}'
                 )
                 print(f'  {"=" * 76}\n')
 
@@ -424,8 +426,15 @@ class BatchTrainer:
             f.write('=' * 80 + '\n\n')
 
             f.write('IMPORTANT NOTE:\n')
+            f.write('  - NSE (Nash-Sutcliffe Efficiency) is calculated in LOG SPACE\n')
+            f.write('    - Primary metric for hyperparameter tuning and model selection\n')
+            f.write('    - NSE = 1: Perfect fit; NSE = 0: Model equals mean; NSE < 0: Model worse than mean\n')
             f.write('  - R² values are calculated in LOG SPACE (log1p transformed targets)\n')
-            f.write('  - RMSE and MAE values are in ORIGINAL SCALE (interpretable units)\n')
+            f.write('    - Reference metric only, not used for model selection\n')
+            f.write('  - RMSE values are in ORIGINAL SCALE (interpretable units)\n')
+            f.write('  - NRMSE (Normalized RMSE) is in ORIGINAL SCALE as percentage\n')
+            f.write('    - NRMSE = RMSE / (max - min) * 100%\n')
+            f.write('    - Normalizes error to be comparable across different concentration scales\n')
             f.write('  - This approach is used due to wide-range pollutant concentrations\n\n')
 
             f.write('Configuration:\n')
@@ -448,10 +457,11 @@ class BatchTrainer:
                 for _, row in pollutant_df.iterrows():
                     best_marker = ' [BEST MODEL]' if row.get('best_model', False) else ''
                     f.write(f'  {row["model_name"]}{best_marker}\n')
-                    f.write(f'    R² (log)     = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}\n')
-                    f.write(f'    RMSE (orig)  = {row["mean_rmse"]:.4f} ± {row["std_rmse"]:.4f}\n')
-                    f.write(f'    MAE (orig)   = {row["mean_mae"]:.4f} ± {row["std_mae"]:.4f}\n')
-                    f.write(f'    Folds        = {row["n_folds"]}/{self.n_outer}\n')
+                    f.write(f'    NSE (log)     = {row["mean_nse"]:.4f} ± {row["std_nse"]:.4f}\n')
+                    f.write(f'    R² (log)      = {row["mean_r2"]:.4f} ± {row["std_r2"]:.4f}\n')
+                    f.write(f'    RMSE (orig)   = {row["mean_rmse"]:.4f} ± {row["std_rmse"]:.4f}\n')
+                    f.write(f'    NRMSE (%)     = {row["mean_nrmse"]:.1f}% ± {row["std_nrmse"]:.1f}%\n')
+                    f.write(f'    Folds         = {row["n_folds"]}/{self.n_outer}\n')
                     f.write('\n')
 
             f.write('\n' + '=' * 80 + '\n')
@@ -461,7 +471,7 @@ class BatchTrainer:
             best_models = results_df[results_df.get('best_model', False)]
             for _, row in best_models.iterrows():
                 f.write(
-                    f'{row["pollutant"]:<20} {row["model_name"]:<15} R² (log) = {row["mean_r2"]:.4f}\n'
+                    f'{row["pollutant"]:<20} {row["model_name"]:<15} NSE (log) = {row["mean_nse"]:.4f}\n'
                 )
 
             f.write('\n' + '=' * 80 + '\n')

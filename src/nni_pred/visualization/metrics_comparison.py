@@ -63,12 +63,39 @@ def plot_cv_metrics(
 
     y_pos = np.arange(len(df))
 
-    # --- Subplot 1: R² Score ---
+    # --- Subplot 1: NSE Score ---
     ax1 = axes[0]
-    bars1 = ax1.barh(y_pos, df['mean_r2'], color=color_r2, alpha=0.7, edgecolor='black')
+    bars1 = ax1.barh(y_pos, df['mean_nse'], color=color_r2, alpha=0.7, edgecolor='black')
 
     if show_std:
         ax1.errorbar(
+            df['mean_nse'],
+            y_pos,
+            xerr=df['std_nse'],
+            fmt='none',
+            ecolor='black',
+            capsize=3,
+            alpha=0.5,
+        )
+
+    ax1.set_yticks(y_pos)
+    ax1.set_yticklabels(y_labels, fontsize=10)
+    ax1.set_xlabel('NSE (log space)', fontsize=12, fontweight='bold')
+    ax1.set_title(f'NSE (log){title_suffix}', fontsize=13, fontweight='bold')
+    ax1.grid(axis='x', alpha=0.3, linestyle='--')
+    ax1.axvline(x=0, color='black', linewidth=0.8)
+
+    # Add value labels on bars
+    for i, (bar, val, std) in enumerate(zip(bars1, df['mean_nse'], df['std_nse'])):
+        label = f'{val:.3f}' if not show_std else f'{val:.3f}±{std:.3f}'
+        ax1.text(val + 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
+
+    # --- Subplot 2: R² Score ---
+    ax2 = axes[1]
+    bars2 = ax2.barh(y_pos, df['mean_r2'], color=color_rmse, alpha=0.7, edgecolor='black')
+
+    if show_std:
+        ax2.errorbar(
             df['mean_r2'],
             y_pos,
             xerr=df['std_r2'],
@@ -78,54 +105,27 @@ def plot_cv_metrics(
             alpha=0.5,
         )
 
-    ax1.set_yticks(y_pos)
-    ax1.set_yticklabels(y_labels, fontsize=10)
-    ax1.set_xlabel('R² Score (log space)', fontsize=12, fontweight='bold')
-    ax1.set_title(f'R² Score (log){title_suffix}', fontsize=13, fontweight='bold')
-    ax1.grid(axis='x', alpha=0.3, linestyle='--')
-    ax1.axvline(x=0, color='black', linewidth=0.8)
-
-    # Add value labels on bars
-    for i, (bar, val, std) in enumerate(zip(bars1, df['mean_r2'], df['std_r2'])):
-        label = f'{val:.3f}' if not show_std else f'{val:.3f}±{std:.3f}'
-        ax1.text(val + 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
-
-    # --- Subplot 2: RMSE ---
-    ax2 = axes[1]
-    bars2 = ax2.barh(y_pos, df['mean_rmse'], color=color_rmse, alpha=0.7, edgecolor='black')
-
-    if show_std:
-        ax2.errorbar(
-            df['mean_rmse'],
-            y_pos,
-            xerr=df['std_rmse'],
-            fmt='none',
-            ecolor='black',
-            capsize=3,
-            alpha=0.5,
-        )
-
     ax2.set_yticks(y_pos)
     ax2.set_yticklabels([])  # Hide y-axis labels (already shown in left plot)
-    ax2.set_xlabel('RMSE (original scale)', fontsize=12, fontweight='bold')
-    ax2.set_title(f'RMSE (original){title_suffix}', fontsize=13, fontweight='bold')
+    ax2.set_xlabel('R² Score (log space)', fontsize=12, fontweight='bold')
+    ax2.set_title(f'R² Score (log){title_suffix}', fontsize=13, fontweight='bold')
     ax2.grid(axis='x', alpha=0.3, linestyle='--')
     ax2.axvline(x=0, color='black', linewidth=0.8)
 
     # Add value labels on bars
-    for i, (bar, val, std) in enumerate(zip(bars2, df['mean_rmse'], df['std_rmse'])):
+    for i, (bar, val, std) in enumerate(zip(bars2, df['mean_r2'], df['std_r2'])):
         label = f'{val:.3f}' if not show_std else f'{val:.3f}±{std:.3f}'
-        ax2.text(val + max(df['mean_rmse']) * 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
+        ax2.text(val + max(df['mean_r2'].max(), 1) * 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
 
-    # --- Subplot 3: MAE ---
+    # --- Subplot 3: NRMSE ---
     ax3 = axes[2]
-    bars3 = ax3.barh(y_pos, df['mean_mae'], color=color_mae, alpha=0.7, edgecolor='black')
+    bars3 = ax3.barh(y_pos, df['mean_nrmse'], color=color_mae, alpha=0.7, edgecolor='black')
 
     if show_std:
         ax3.errorbar(
-            df['mean_mae'],
+            df['mean_nrmse'],
             y_pos,
-            xerr=df['std_mae'],
+            xerr=df['std_nrmse'],
             fmt='none',
             ecolor='black',
             capsize=3,
@@ -134,15 +134,15 @@ def plot_cv_metrics(
 
     ax3.set_yticks(y_pos)
     ax3.set_yticklabels([])  # Hide y-axis labels
-    ax3.set_xlabel('MAE (original scale)', fontsize=12, fontweight='bold')
-    ax3.set_title(f'MAE (original){title_suffix}', fontsize=13, fontweight='bold')
+    ax3.set_xlabel('NRMSE (%)', fontsize=12, fontweight='bold')
+    ax3.set_title(f'NRMSE (original scale){title_suffix}', fontsize=13, fontweight='bold')
     ax3.grid(axis='x', alpha=0.3, linestyle='--')
     ax3.axvline(x=0, color='black', linewidth=0.8)
 
     # Add value labels on bars
-    for i, (bar, val, std) in enumerate(zip(bars3, df['mean_mae'], df['std_mae'])):
-        label = f'{val:.3f}' if not show_std else f'{val:.3f}±{std:.3f}'
-        ax3.text(val + max(df['mean_mae']) * 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
+    for i, (bar, val, std) in enumerate(zip(bars3, df['mean_nrmse'], df['std_nrmse'])):
+        label = f'{val:.1f}' if not show_std else f'{val:.1f}±{std:.1f}'
+        ax3.text(val + max(df['mean_nrmse']) * 0.01, bar.get_y() + bar.get_height() / 2, label, va='center', fontsize=8)
 
     # Overall title
     fig.suptitle(

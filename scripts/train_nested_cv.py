@@ -117,12 +117,6 @@ Grid sizes:
     )
 
     parser.add_argument(
-        '--inverse-transform-targets',
-        action='store_true',
-        help='Inverse transform target variables (log1p)',
-    )
-
-    parser.add_argument(
         '--skip-visualization',
         action='store_true',
         help='Skip generating visualization plots after training',
@@ -172,7 +166,6 @@ def main():
     print(f'  Verbose: {args.verbose}')
     print(f'  PCA for tree models: {not args.no_pca_for_tree}')
 
-    # Estimate time
     n_pollutants = 11 if args.pollutants == ['all'] else len(args.pollutants)
     print(f'{"=" * 80}\n')
 
@@ -194,7 +187,7 @@ def main():
         random_state=args.random_state,
         verbose=args.verbose,
         use_pca_for_tree=not args.no_pca_for_tree,
-        inverse_transform_targets=args.inverse_transform_targets,
+        inverse_transform_targets=True,
     )
 
     try:

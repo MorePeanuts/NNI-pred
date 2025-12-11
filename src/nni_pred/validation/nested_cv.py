@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error, make_scorer
 
 from ..preprocessing import CVCompatiblePreprocessingPipeline
 from ..models.base import BaseModel
@@ -107,6 +107,12 @@ class NestedSpatialCV:
         oof_predictions_log = np.full(len(y), np.nan)  # Log-space predictions
         oof_predictions_original = np.full(len(y), np.nan)  # Original-space predictions
 
+        # Create NSE scorer for hyperparameter tuning
+        nse_scorer = make_scorer(
+            lambda y_true, y_pred: self._calculate_nse(y_true, y_pred),
+            greater_is_better=True
+        )
+
         # Outer loop: Generalization evaluation
         for fold_idx, (outer_train_idx, outer_test_idx) in enumerate(outer_cv.split(X, y, groups)):
             if self.verbose >= 1:
@@ -151,7 +157,7 @@ class NestedSpatialCV:
                 pipeline,
                 param_grid=pipeline_param_grid,
                 cv=inner_cv,
-                scoring='r2',
+                scoring=nse_scorer,  # Use NSE instead of R²
                 n_jobs=-1,
                 verbose=0 if self.verbose < 2 else 1,
             )
@@ -178,11 +184,14 @@ class NestedSpatialCV:
                     oof_predictions_original[outer_test_idx] = y_pred
 
                 # Calculate metrics
-                # R² is calculated in LOG SPACE (more stable for wide-range concentrations)
+                # NSE (Nash-Sutcliffe Efficiency) in LOG SPACE - primary metric for model selection
+                nse = self._calculate_nse(y_outer_test.values, y_pred)
+                # R² is calculated in LOG SPACE (for reference)
                 r2 = r2_score(y_outer_test, y_pred)
-                # RMSE and MAE are calculated in ORIGINAL SCALE (interpretable units)
+                # RMSE in ORIGINAL SCALE (interpretable units)
                 rmse = np.sqrt(mean_squared_error(y_test_original, y_pred_original))
-                mae = mean_absolute_error(y_test_original, y_pred_original)
+                # NRMSE (Normalized RMSE) in ORIGINAL SCALE - more interpretable than MAE
+                nrmse = self._calculate_nrmse(y_test_original, y_pred_original)
 
                 # Extract best params (remove 'model__' prefix)
                 best_params = {
@@ -192,19 +201,21 @@ class NestedSpatialCV:
                 fold_result = {
                     'fold': fold_idx + 1,
                     'best_params': best_params,
+                    'nse': nse,
                     'r2': r2,
                     'rmse': rmse,
-                    'mae': mae,
+                    'nrmse': nrmse,
                     'n_train': len(X_outer_train),
                     'n_test': len(X_outer_test),
-                    'best_inner_score': grid_search.best_score_,  # Inner CV R²
+                    'best_inner_score': grid_search.best_score_,  # Inner CV R² (will be replaced by NSE)
                 }
 
                 if self.verbose >= 1:
                     print('  Results:')
+                    print(f'    NSE  = {nse:.4f}')
                     print(f'    R²   = {r2:.4f}')
                     print(f'    RMSE = {rmse:.4f}')
-                    print(f'    MAE  = {mae:.4f}')
+                    print(f'    NRMSE = {nrmse:.1f}%')
                     if self.verbose >= 2:
                         print(f'    Best inner CV R² = {grid_search.best_score_:.4f}')
                         print(f'    Best params: {best_params}')
@@ -222,7 +233,7 @@ class NestedSpatialCV:
             raise ValueError('All outer folds failed. Cannot proceed.')
 
         # Aggregate results
-        metrics = ['r2', 'rmse', 'mae']
+        metrics = ['nse', 'r2', 'rmse', 'nrmse']
         mean_metrics = {m: np.mean([r[m] for r in outer_results]) for m in metrics}
         std_metrics = {m: np.std([r[m] for r in outer_results]) for m in metrics}
 
@@ -230,9 +241,10 @@ class NestedSpatialCV:
             print(f'\n{"=" * 60}')
             print(f'Nested CV Complete: {model.get_model_name()}')
             print(f'{"=" * 60}')
-            print(f'Mean R² (log space) = {mean_metrics["r2"]:.4f} ± {std_metrics["r2"]:.4f}')
+            print(f'Mean NSE (log space)  = {mean_metrics["nse"]:.4f} ± {std_metrics["nse"]:.4f}')
+            print(f'Mean R² (log space)  = {mean_metrics["r2"]:.4f} ± {std_metrics["r2"]:.4f}')
             print(f'Mean RMSE (original) = {mean_metrics["rmse"]:.4f} ± {std_metrics["rmse"]:.4f}')
-            print(f'Mean MAE (original)  = {mean_metrics["mae"]:.4f} ± {std_metrics["mae"]:.4f}')
+            print(f'Mean NRMSE (original)= {mean_metrics["nrmse"]:.1f}% ± {std_metrics["nrmse"]:.1f}%')
             print(f'{"=" * 60}\n')
 
         return {
@@ -244,6 +256,61 @@ class NestedSpatialCV:
             'oof_predictions_log': oof_predictions_log,
             'oof_predictions_original': oof_predictions_original,
         }
+
+    @staticmethod
+    def _calculate_nse(observed: np.ndarray, simulated: np.ndarray) -> float:
+        """
+        Calculate Nash-Sutcliffe Efficiency (NSE).
+
+        NSE = 1 - (sum of squared residuals) / (sum of squared deviations from mean)
+        NSE = 1: Perfect fit
+        NSE = 0: Model performance equals the mean of observations
+        NSE < 0: Model is worse than simply using the mean
+
+        Args:
+            observed: Observed values (in log space)
+            simulated: Simulated/predicted values (in log space)
+
+        Returns:
+            NSE value
+        """
+        # Avoid division by zero
+        if np.var(observed) == 0:
+            return -np.inf
+
+        # Calculate NSE
+        numerator = np.sum((observed - simulated) ** 2)
+        denominator = np.sum((observed - np.mean(observed)) ** 2)
+
+        if denominator == 0:
+            return 0 if numerator == 0 else -np.inf
+
+        nse = 1 - numerator / denominator
+        return nse
+
+    @staticmethod
+    def _calculate_nrmse(observed: np.ndarray, simulated: np.ndarray) -> float:
+        """
+        Calculate Normalized Root Mean Square Error (NRMSE).
+
+        NRMSE = RMSE / (max - min) * 100%
+        Normalizes RMSE to be comparable across different scales
+
+        Args:
+            observed: Observed values (in original scale)
+            simulated: Simulated/predicted values (in original scale)
+
+        Returns:
+            NRMSE as percentage
+        """
+        rmse = np.sqrt(mean_squared_error(observed, simulated))
+        data_range = np.max(observed) - np.min(observed)
+
+        if data_range == 0:
+            return 0 if rmse == 0 else np.inf
+
+        nrmse = (rmse / data_range) * 100
+        return nrmse
 
     def _count_grid_combinations(self, param_grid: dict) -> int:
         """
