@@ -188,13 +188,17 @@ class BatchTrainer:
 
                 print(f'\n  {"=" * 76}')
                 print(f'  BEST MODEL for {pollutant}: {best_model_name}')
-                print(f'  R² (log space) = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}')
+                print(
+                    f'  R² (log space) = {pollutant_results[best_model_name]["mean_metrics"]["r2"]:.4f}'
+                )
                 print(f'  {"=" * 76}\n')
 
                 # Mark best model
                 for r in results:
                     if r['pollutant'] == pollutant:
                         r['best_model'] = r['model_name'] == best_model_name
+            else:
+                best_model_name = None
 
             # Store detailed results
             detailed_results[pollutant] = pollutant_results
@@ -304,9 +308,9 @@ class BatchTrainer:
             Dictionary of model instances
         """
         return {
-            'ElasticNet': ElasticNetModel(),
-            'RandomForest': RandomForestModel(),
-            'XGBoost': XGBoostModel(),
+            'ElasticNet': ElasticNetModel(self.random_state),
+            'RandomForest': RandomForestModel(self.random_state),
+            'XGBoost': XGBoostModel(self.random_state),
         }
 
     def _get_param_grid(self, model, grid_size: str) -> dict | None:
@@ -466,9 +470,7 @@ class BatchTrainer:
 
         print(f'\nReport saved to: {report_path}')
 
-    def _save_oof_predictions(
-        self, oof_predictions: dict, df: pd.DataFrame, output_path: Path
-    ):
+    def _save_oof_predictions(self, oof_predictions: dict, df: pd.DataFrame, output_path: Path):
         """
         Save out-of-fold predictions for visualization.
 
@@ -504,7 +506,7 @@ class BatchTrainer:
                     'Season_Rainy': 'Rainy',
                 }
                 # Find which season column is 1 for each row
-                oof_df['Season'] = df[season_cols].idxmax(axis=1).map(season_map)
+                oof_df['Season'] = df[season_cols].idxmax(axis=1).map(season_map)  # type: ignore
             else:
                 print('  WARNING: Cannot recover Season column, setting to "Unknown"')
                 oof_df['Season'] = 'Unknown'

@@ -16,9 +16,10 @@ class RandomForestModel(BaseModel):
     It does NOT require skewness correction in preprocessing.
     """
 
-    def __init__(self):
+    def __init__(self, random_state=42):
         """Initialize model wrapper."""
         self.model = None
+        self.random_state = random_state
 
     def get_param_grid(self) -> dict:
         """
@@ -44,7 +45,7 @@ class RandomForestModel(BaseModel):
             RandomForestRegressor with fixed random_state and parallelization
         """
         return RandomForestRegressor(
-            random_state=42,
+            random_state=self.random_state,
             n_jobs=-1,  # Use all CPU cores
         )
 

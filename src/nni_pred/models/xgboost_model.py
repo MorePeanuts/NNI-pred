@@ -16,9 +16,10 @@ class XGBoostModel(BaseModel):
     It does NOT require skewness correction in preprocessing.
     """
 
-    def __init__(self):
+    def __init__(self, random_state=42):
         """Initialize model wrapper."""
         self.model = None
+        self.random_state = random_state
 
     def get_param_grid(self) -> dict:
         """
@@ -31,13 +32,13 @@ class XGBoostModel(BaseModel):
             Dictionary with hyperparameter search space
         """
         return {
-            'n_estimators': [100, 200, 500],           # Number of boosting rounds
-            'max_depth': [3, 5, 7],                    # Tree depth
-            'learning_rate': [0.01, 0.05, 0.1],        # Step size shrinkage
-            'subsample': [0.8, 1.0],                   # Fraction of samples per tree
-            'colsample_bytree': [0.8, 1.0],            # Fraction of features per tree
-            'reg_alpha': [0, 0.1, 1],                  # L1 regularization
-            'reg_lambda': [1, 5, 10],                  # L2 regularization
+            'n_estimators': [100, 200, 500],  # Number of boosting rounds
+            'max_depth': [3, 5, 7],  # Tree depth
+            'learning_rate': [0.01, 0.05, 0.1],  # Step size shrinkage
+            'subsample': [0.8, 1.0],  # Fraction of samples per tree
+            'colsample_bytree': [0.8, 1.0],  # Fraction of features per tree
+            'reg_alpha': [0, 0.1, 1],  # L1 regularization
+            'reg_lambda': [1, 5, 10],  # L2 regularization
         }
         # Total combinations: 3 × 3 × 3 × 2 × 2 × 3 × 3 = 972
 
@@ -87,9 +88,9 @@ class XGBoostModel(BaseModel):
             XGBRegressor with fixed random_state and parallelization
         """
         return XGBRegressor(
-            random_state=42,
-            n_jobs=-1,       # Use all CPU cores
-            verbosity=0,     # Suppress XGBoost warnings
+            random_state=self.random_state,
+            n_jobs=-1,  # Use all CPU cores
+            verbosity=0,  # Suppress XGBoost warnings
         )
 
     def get_model_type(self) -> str:
@@ -128,7 +129,7 @@ class XGBoostModel(BaseModel):
             Predicted values
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.predict(X)
 
     def get_feature_importances(self):
@@ -139,5 +140,5 @@ class XGBoostModel(BaseModel):
             Array of feature importances (gain-based)
         """
         if self.model is None:
-            raise ValueError("Model has not been fitted yet")
+            raise ValueError('Model has not been fitted yet')
         return self.model.feature_importances_

@@ -92,7 +92,7 @@ class NestedSpatialCV:
             param_grid = model.get_param_grid()
 
         # Initialize outer CV
-        outer_cv = GroupKFold(n_splits=self.n_outer)
+        outer_cv = GroupKFold(n_splits=self.n_outer, shuffle=True, random_state=self.random_state)
         outer_results = []
 
         if self.verbose >= 1:
@@ -142,7 +142,9 @@ class NestedSpatialCV:
             pipeline_param_grid = {f'model__{k}': v for k, v in param_grid.items()}
 
             # Inner CV for hyperparameter tuning
-            inner_cv = GroupKFold(n_splits=self.n_inner)
+            inner_cv = GroupKFold(
+                n_splits=self.n_inner, shuffle=True, random_state=self.random_state
+            )
 
             # Grid search
             grid_search = GridSearchCV(

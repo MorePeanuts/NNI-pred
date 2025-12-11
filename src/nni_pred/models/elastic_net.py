@@ -16,9 +16,10 @@ class ElasticNetModel(BaseModel):
     It requires skewness correction in preprocessing.
     """
 
-    def __init__(self):
+    def __init__(self, random_state=42):
         """Initialize model wrapper."""
         self.model = None
+        self.random_state = random_state
 
     def get_param_grid(self) -> dict:
         """
@@ -41,7 +42,7 @@ class ElasticNetModel(BaseModel):
         Returns:
             ElasticNet regressor with fixed random_state
         """
-        return ElasticNet(random_state=42)
+        return ElasticNet(random_state=self.random_state)
 
     def get_model_type(self) -> str:
         """
