@@ -269,4 +269,72 @@ def get_feature_groups() -> FeatureGroups:
 
 
 class MergedTabularDataset:
-    pass
+    def __init__(self, data_path: Path | None = None):
+        if data_path is None:
+            data_path = Path(__file__).parents[2] / 'datasets/merged_data.csv'
+        assert data_path.exists(), f'data path {data_path} doesnot exists.'
+        self.df = pd.read_csv(data_path)
+        self.groups = self._create_groups()
+        self.feature_groups = get_feature_groups()
+        self._apply_one_hot_encoding()
+
+    def _create_groups(self, lon_col: str = 'Lon', lat_col: str = 'Lat'):
+        """
+        Generate group IDs based on spatial location.
+
+        Args:
+            lon_col: Name of longitude column (default: 'Lon')
+            lat_col: Name of latitude column (default: 'Lat')
+
+        Returns:
+            np.ndarray of shape (n_samples,) with group IDs (0 to n_locations-1)
+        """
+        # Extract unique locations
+        locations = self.df[[lon_col, lat_col]].drop_duplicates().reset_index(drop=True)
+
+        # Create mapping: (lon, lat) -> group_id
+        location_to_group = {(row[lon_col], row[lat_col]): idx for idx, row in locations.iterrows()}
+
+        # Assign group to each sample
+        groups = self.df.apply(
+            lambda row: location_to_group[(row[lon_col], row[lat_col])], axis=1
+        ).values
+
+        return groups
+
+    def prepare_data(self) -> tuple[pd.DataFrame, dict, np.ndarray]:
+        """
+        Prepare features, targets, and spatial groups.
+
+        Args:
+            df: Loaded dataframe
+
+        Returns:
+            Tuple of (X, y_dict, groups)
+        """
+        # Extract targets
+        assert isinstance(self.feature_groups, FeatureGroups)
+        target_cols = self.feature_groups.targets
+        y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
+
+        # Extract metadata columns
+        metadata_cols = self.feature_groups.metadata
+
+        # Features = all columns except targets and metadata
+        exclude_cols = list(y_dict.keys()) + metadata_cols
+        feature_cols = [c for c in self.df.columns if c not in exclude_cols]
+        X = self.df[feature_cols]
+
+        return X, y_dict, self.groups
+
+    def _apply_one_hot_encoding(self):
+        """
+        Apply one-hot encoding to categorical variables.
+        """
+        assert isinstance(self.feature_groups, FeatureGroups)
+        categorical_vars = self.feature_groups.categorical
+
+        for col in categorical_vars:
+            dummies = pd.get_dummies(self.df[col], prefix=col, drop_first=False, dtype=float)
+            self.df = self.df.drop(columns=[col])
+            self.df = pd.concat([self.df, dummies], axis=1)
