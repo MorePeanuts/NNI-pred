@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
+from typing import Literal
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.compose import TransformedTargetRegressor
+from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from .data import FeatureGroups, get_feature_groups
@@ -99,3 +100,14 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
                 'cumulative_variance': np.cumsum(self.group3_pca_.explained_variance_ratio_)[-1],
             },
         }
+
+
+def get_column_transformer(model_type: Literal['linear', 'rf', 'xgb'], random_state: int = 42):
+    match model_type:
+        case 'rf' | 'xgb':
+            pca = GroupedPCA(random_state=random_state)
+            return ColumnTransformer(
+                transformers=[('pca', pca, pca.get_feature_cols())], remainder='passthrough'
+            )
+        case 'linear':
+            ...
