@@ -303,7 +303,7 @@ class MergedTabularDataset:
 
         return groups
 
-    def prepare_data(self) -> tuple[pd.DataFrame, dict, np.ndarray]:
+    def prepare_data(self) -> tuple[pd.DataFrame, dict[str, pd.Series], np.ndarray]:
         """
         Prepare features, targets, and spatial groups.
 
