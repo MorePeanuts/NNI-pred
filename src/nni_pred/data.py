@@ -276,6 +276,7 @@ class MergedTabularDataset:
         self.df = pd.read_csv(data_path)
         self.groups = self._create_groups()
         self.feature_groups = get_feature_groups()
+        self._validate_features()
         self._apply_one_hot_encoding()
 
     def _create_groups(self, lon_col: str = 'Lon', lat_col: str = 'Lat'):
@@ -326,6 +327,28 @@ class MergedTabularDataset:
         X = self.df[feature_cols]
 
         return X, y_dict, self.groups
+
+    def _validate_features(self):
+        assert isinstance(self.feature_groups, FeatureGroups)
+        assert isinstance(self.df, pd.DataFrame)
+
+        for col in self.feature_groups.group1_natural:
+            assert col in self.df.columns
+
+        for col in self.feature_groups.group2_agro:
+            assert col in self.df.columns
+
+        for col in self.feature_groups.group3_socio:
+            assert col in self.df.columns
+
+        for col in self.feature_groups.targets:
+            assert col in self.df.columns
+
+        for col in self.feature_groups.metadata:
+            assert col in self.df.columns
+
+        for col in self.feature_groups.categorical:
+            assert self.df.columns.str.startswith(col).any()
 
     def _apply_one_hot_encoding(self):
         """
