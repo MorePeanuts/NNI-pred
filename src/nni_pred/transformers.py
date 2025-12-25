@@ -11,14 +11,17 @@ from .data import FeatureGroups, get_feature_groups
 
 
 class TargetTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        self.offset_ = None
+    def __init__(self, offset_: float | None = None):
+        self.offset_ = offset_
 
     def fit(self, y, sample_weight=None):
-        positive_y = y[y > 0]
-        min_pos = np.min(positive_y) if len(positive_y) > 0 else 1e-6
-        self.offset_ = min_pos / 2.0
-        return self
+        if self.offset_ is not None:
+            return self
+        else:
+            positive_y = y[y > 0]
+            min_pos = np.min(positive_y) if len(positive_y) > 0 else 1e-6
+            self.offset_ = min_pos / 2.0
+            return self
 
     def transform(self, y):
         return np.log(y + self.offset_)
