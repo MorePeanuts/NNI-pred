@@ -3,7 +3,7 @@ Perform a simplest nested spatial cross-validation using the random forest model
 """
 
 import numpy as np
-from nni_pred.models import NNIPredictorRF
+from nni_pred.models import RandomForestBuilder
 from nni_pred.data import MergedTabularDataset
 from nni_pred.transformers import GroupedPCA, TargetTransformer
 from sklearn.model_selection import GroupKFold, GridSearchCV
@@ -14,21 +14,14 @@ from loguru import logger
 
 
 dataset = MergedTabularDataset()
+builder = RandomForestBuilder()
 model = TransformedTargetRegressor(
-    regressor=NNIPredictorRF().model, transformer=TargetTransformer()
+    regressor=builder.get_regressor(), transformer=TargetTransformer()
 )
 X, y_dict, groups = dataset.prepare_data()
-param_grid = {
-    'n_estimators': [100, 200],  # Number of trees
-    'max_depth': [8, 15],  # Tree depth
-    'min_samples_split': [5, 10],  # Min samples to split
-    'min_samples_leaf': [2, 4],  # Min samples per leaf
-    'max_features': ['sqrt', 'log2'],  # Features per split
-}
+param_grid = builder.get_default_param_grid('small')
 
-for idx, (target, y) in enumerate(y_dict.items()):
-    if idx >= 3:
-        break
+for _, (target, y) in enumerate(y_dict.items()):
     logger.info(f'Training Random Forest Predictor for {target}...')
     outer_cv = GroupKFold(5, shuffle=True, random_state=42)
 
