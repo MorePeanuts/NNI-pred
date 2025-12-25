@@ -4,9 +4,9 @@ Perform a simplest nested spatial cross-validation using the random forest model
 
 import argparse
 import numpy as np
-from nni_pred.models import RandomForestBuilder, XGBoostBuilder
+from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 from nni_pred.data import MergedTabularDataset
-from nni_pred.transformers import GroupedPCA, TargetTransformer, get_column_transformer
+from nni_pred.transformers import GroupedPCA, TargetTransformer, get_feature_engineering
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -16,6 +16,9 @@ from loguru import logger
 
 def main():
     match args.model_type:
+        case 'linear':
+            builder = ElasticNetBuilder()
+            model_name = 'Elastic Net Regressor'
         case 'rf':
             builder = RandomForestBuilder()
             model_name = 'Random Forest Regressor'
@@ -43,7 +46,7 @@ def main():
             test_y = y.iloc[test_idx]
             train_groups = groups[train_val_idx]
 
-            feature_engineering = get_column_transformer(args.model_type, random_state=args.seed)
+            feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
             pipeline = Pipeline(
                 [
                     ('prep', feature_engineering),

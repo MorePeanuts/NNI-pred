@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+from scipy import stats
 from typing import Literal
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from .data import FeatureGroups, get_feature_groups
@@ -102,12 +104,84 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         }
 
 
-def get_column_transformer(model_type: Literal['linear', 'rf', 'xgb'], random_state: int = 42):
+class SkewnessTransformer(BaseEstimator, TransformerMixin):
+    def __init__(
+        self, feature_groups: FeatureGroups | None = None, skewness_threshold: float = 0.75
+    ):
+        self.feature_groups = feature_groups or get_feature_groups()
+        self.skewness_threshold = skewness_threshold
+
+    def fit(self, X: pd.DataFrame, y=None):
+        assert isinstance(self.feature_groups, FeatureGroups)
+
+        categorical_prefixes = self.feature_groups.categorical
+        categorical_cols = [
+            col
+            for col in X.columns
+            if any(col.startswith(prefix) for prefix in categorical_prefixes)
+        ]
+        self.continuous_cols = [col for col in X.columns if col not in categorical_cols]
+
+        # Calculate skewness on training data
+        self.skewness_dict_ = {}
+        self.high_skew_features_ = []
+        self.min_shifts_ = {}
+
+        for col in self.continuous_cols:
+            skew_val = stats.skew(X[col].dropna())
+            self.skewness_dict_[col] = skew_val
+
+            # Identify high-skew features
+            if abs(skew_val) > self.skewness_threshold:
+                self.high_skew_features_.append(col)
+
+                # Store min value for shift (handle negative values)
+                min_val = X[col].min()
+                self.min_shifts_[col] = min_val if min_val < 0 else 0
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        X_transformed = X.copy()
+
+        for col in self.high_skew_features_:
+            if col not in X_transformed.columns:
+                continue
+
+            min_shift = self.min_shifts_[col]
+
+            if min_shift < 0:
+                # Shift to make all values positive before log
+                X_transformed[col] = np.log1p(X[col] - min_shift + 1)
+            else:
+                # Direct log1p transformation
+                X_transformed[col] = np.log1p(X[col])
+
+        return X_transformed
+
+
+def get_feature_engineering(
+    model_type: Literal['linear', 'rf', 'xgb'], random_state: int = 42
+) -> Pipeline:
+    feature_groups = get_feature_groups()
     match model_type:
         case 'rf' | 'xgb':
             pca = GroupedPCA(random_state=random_state)
-            return ColumnTransformer(
+            column_transformer = ColumnTransformer(
                 transformers=[('pca', pca, pca.get_feature_cols())], remainder='passthrough'
             )
+            return Pipeline([('column_transformer', column_transformer)])
         case 'linear':
-            ...
+            skew_shift = SkewnessTransformer()
+            group1_scaler = StandardScaler()
+            pca = GroupedPCA(random_state=random_state)
+            column_transformer = ColumnTransformer(
+                transformers=[
+                    ('pca', pca, pca.get_feature_cols()),
+                    ('group1_scaler', group1_scaler, feature_groups.group1_natural),
+                ],
+                remainder='passthrough',
+            )
+            return Pipeline(
+                [('skew_shift', skew_shift), ('column_transformer', column_transformer)]
+            )

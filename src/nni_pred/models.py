@@ -5,12 +5,46 @@ from typing import Literal
 from xgboost import XGBRegressor
 from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import ElasticNet
 from dataclasses import dataclass
 
 
 @dataclass
 class RandomForestConfig:
     pass
+
+
+class ElasticNetBuilder:
+    def __init__(
+        self,
+        random_state: int = 42,
+        **kwargs,
+    ):
+        self.random_state = random_state
+
+    def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
+        match scale:
+            case 'small':
+                return {
+                    'alpha': [0.01, 0.1, 1.0],
+                    'l1_ratio': [0.3, 0.5, 0.7],
+                    'max_iter': [10000],
+                }
+            case 'medium':
+                return {
+                    'alpha': [0.0005, 0.001, 0.01, 0.1, 1.0, 10.0],
+                    'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9, 0.99],
+                    'max_iter': [10000],
+                }
+            case 'large':
+                return {
+                    'alpha': [0.0005, 0.001, 0.01, 0.1, 1.0, 10.0],
+                    'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9, 0.99],
+                    'max_iter': [10000],
+                }
+
+    def get_regressor(self):
+        return ElasticNet(random_state=self.random_state)
 
 
 class RandomForestBuilder:
