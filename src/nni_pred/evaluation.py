@@ -22,6 +22,7 @@ class Metrics:
         y_pred_log = np.log(y_pred + offset)
         assert not np.isnan(y_true_log).any(), f'offset={offset}\ny_true={y_true}'
         assert not np.isnan(y_pred_log).any(), f'offset={offset}\ny_pred={y_pred}'
+        # BUG:如果在TargetTransformer中使用训练的offset，可能在此处出现NaN的问题
         return cls(
             NSE_log=cls.calc_nse(y_true_log, y_pred_log),
             RSR_log=cls.calc_rsr(y_true_log, y_pred_log),

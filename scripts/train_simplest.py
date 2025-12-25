@@ -2,11 +2,15 @@
 Perform a simplest nested spatial cross-validation using the random forest model.
 """
 
+import joblib
 import argparse
 import numpy as np
+from datetime import datetime
+from pathlib import Path
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 from nni_pred.data import MergedTabularDataset
 from nni_pred.transformers import GroupedPCA, TargetTransformer, get_feature_engineering
+from nni_pred.evaluation import Metrics, Evaluator
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -27,19 +31,19 @@ def main():
             model_name = 'XGBoost Regressor'
 
     dataset = MergedTabularDataset()
-    model = TransformedTargetRegressor(
-        regressor=builder.get_regressor(), transformer=TargetTransformer()
-    )
     X, y_dict, groups = dataset.prepare_data()
     param_grid = builder.get_default_param_grid(args.size)
+    custom_scoring = make_scorer(Metrics.calc_kge, greater_is_better=True)
+    param_grid_pipeline = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
     for _, (target, y) in enumerate(y_dict.items()):
         if 'all' not in args.targets and target not in args.targets:
             continue
         logger.info(f'Training {model_name} Predictor for {target}...')
         outer_cv = GroupKFold(5, shuffle=True, random_state=args.seed)
+        evaluator = Evaluator(target, model_name=model_name, k_fold=5)
 
-        for train_val_idx, test_idx in outer_cv.split(X, y, groups):
+        for idx, (train_val_idx, test_idx) in enumerate(outer_cv.split(X, y, groups)):
             train_val_X = X.iloc[train_val_idx]
             train_val_y = y.iloc[train_val_idx]
             test_X = X.iloc[test_idx]
@@ -47,6 +51,9 @@ def main():
             train_groups = groups[train_val_idx]
 
             feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
+            model = TransformedTargetRegressor(
+                builder.get_regressor(), transformer=TargetTransformer(1)
+            )
             pipeline = Pipeline(
                 [
                     ('prep', feature_engineering),
@@ -54,17 +61,57 @@ def main():
                 ]
             )
 
-            param_grid_pipeline = {f'model__regressor__{k}': v for k, v in param_grid.items()}
             inner_cv = GroupKFold(4, shuffle=True, random_state=args.seed)
-            grid_search_cv = GridSearchCV(pipeline, param_grid_pipeline, scoring='r2', cv=inner_cv)
+            grid_search_cv = GridSearchCV(
+                pipeline, param_grid_pipeline, scoring=custom_scoring, cv=inner_cv
+            )
 
             grid_search_cv.fit(train_val_X, train_val_y, groups=train_groups)
             test_y_pred = grid_search_cv.predict(test_X)
             offset = grid_search_cv.best_estimator_.named_steps['model'].transformer_.offset_
+            best_param = {
+                k.replace('model__regressor__', ''): v
+                for k, v in grid_search_cv.best_params_.items()
+            }
 
-            # Calculate the test set R2 on a log scale.
-            r2 = r2_score(np.log(test_y.values + offset), np.log(test_y_pred + offset))
-            logger.info(f'  - Test R2 for {target}: {r2}')
+            evaluator.update(
+                X=test_X,
+                y_true=test_y,
+                y_pred=test_y_pred,
+                fold=idx + 1,
+                offset=offset,
+                best_param=best_param,
+                best_inner_score=grid_search_cv.best_score_,
+                report=True,
+            )
+
+        logger.info('Finished!')
+        evaluator.report()
+        oof_metrics_path = output_path / f'oof_metrics_{target}.txt'
+        evaluator.save_result(oof_metrics_path)
+        logger.info(f'OOF metrics have been saved to {oof_metrics_path}')
+
+        logger.info(f'Training {model_name} ({target}) on all data...')
+        feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
+        model = TransformedTargetRegressor(
+            builder.get_regressor(), transformer=TargetTransformer(1)
+        )
+        pipeline = Pipeline(
+            [
+                ('prep', feature_engineering),
+                ('model', model),
+            ]
+        )
+        final_cv = GroupKFold(5, shuffle=True, random_state=args.seed)
+        final_grid_search = GridSearchCV(
+            pipeline, param_grid_pipeline, scoring=custom_scoring, cv=final_cv
+        )
+        final_grid_search.fit(X, y, groups=groups)
+        best_model = final_grid_search.best_estimator_
+        model_path = output_path / f'{model_name}_for_{target}.joblib'
+        joblib.dump(best_model, model_path)
+        logger.info(f'Model has been saved to {model_path}')
+        logger.info('Done.')
 
 
 if __name__ == '__main__':
@@ -86,5 +133,16 @@ if __name__ == '__main__':
         help='Pollutants to train (space-separated). Use "all" for all 11 pollutants. '
         'Available: THIA IMI CLO ACE DIN parentNNIs IMI-UREA DN-IMI DM-ACE CLO-UREA mNNIs',
     )
+    parser.add_argument('--output', type=str, help='Output path for models and evaluation results.')
     args = parser.parse_args()
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        now = datetime.now().strftime('%m%d_%H%M%S')
+        output_path = (
+            Path(__file__).parents[1]
+            / f'output/{args.model_type}_{args.seed}_{"_".join(args.targets)}_{now}'
+        )
+    output_path.mkdir(parents=True, exist_ok=True)
+
     main()
