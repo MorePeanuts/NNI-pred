@@ -2,6 +2,7 @@
 Perform a simplest nested spatial cross-validation using the random forest model.
 """
 
+import sys
 import joblib
 import argparse
 import numpy as np
@@ -39,6 +40,10 @@ def main():
     for _, (target, y) in enumerate(y_dict.items()):
         if 'all' not in args.targets and target not in args.targets:
             continue
+        target_output_path = output_path / f'{target}'
+        target_output_path.mkdir(parents=True, exist_ok=True)
+
+        # Step 1: Nested CV
         logger.info(f'Training {model_name} Predictor for {target}...')
         outer_cv = GroupKFold(5, shuffle=True, random_state=args.seed)
         evaluator = Evaluator(target, model_name=model_name, k_fold=5)
@@ -82,15 +87,12 @@ def main():
                 offset=offset,
                 best_param=best_param,
                 best_inner_score=grid_search_cv.best_score_,
-                report=True,
             )
 
         logger.info('Finished!')
-        evaluator.report()
-        oof_metrics_path = output_path / f'oof_metrics_{target}.txt'
-        evaluator.save_result(oof_metrics_path)
-        logger.info(f'OOF metrics have been saved to {oof_metrics_path}')
+        evaluator.save_result(target_output_path)
 
+        # Step 2: Final model training
         logger.info(f'Training {model_name} ({target}) on all data...')
         feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
         model = TransformedTargetRegressor(
@@ -108,10 +110,11 @@ def main():
         )
         final_grid_search.fit(X, y, groups=groups)
         best_model = final_grid_search.best_estimator_
-        model_path = output_path / f'{model_name}_for_{target}.joblib'
+        model_path = target_output_path / f'{model_name.replace(" ", "_")}_for_{target}.joblib'
         joblib.dump(best_model, model_path)
         logger.info(f'Model has been saved to {model_path}')
-        logger.info('Done.')
+
+    logger.info('Done.')
 
 
 if __name__ == '__main__':
@@ -141,8 +144,12 @@ if __name__ == '__main__':
         now = datetime.now().strftime('%m%d_%H%M%S')
         output_path = (
             Path(__file__).parents[1]
-            / f'output/{args.model_type}_{args.seed}_{"_".join(args.targets)}_{now}'
+            / f'output/simplest_{args.model_type}_{args.seed}_{"_".join(args.targets)}_{now}'
         )
     output_path.mkdir(parents=True, exist_ok=True)
+    log_path = output_path / f'trace_{now}.log'
+    logger.remove()
+    logger.add(sys.stderr, level='INFO')
+    logger.add(log_path, level='TRACE')
 
     main()

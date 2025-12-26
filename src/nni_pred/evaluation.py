@@ -5,6 +5,7 @@ from dataclasses import dataclass, field, asdict
 from sklearn.metrics import mean_squared_error, r2_score
 from tabulate import tabulate
 from loguru import logger
+from pathlib import Path
 
 
 @dataclass
@@ -172,7 +173,6 @@ class Evaluator:
         offset: float,
         best_param: dict,
         best_inner_score: float,
-        report: bool = False,
     ):
         y_true = y_true.values
         if not hasattr(self, 'oof_predictions'):
@@ -196,24 +196,39 @@ class Evaluator:
                 self.fold_infos, self.oof_predictions
             )
 
-        if report:
-            print(
-                f'----({self.model_name}) Fold {fold}/{self.k_fold} finished for {self.target_col}----'
+        logger.info(
+            f'----({self.model_name}) Fold {fold}/{self.k_fold} finished for {self.target_col}----'
+        )
+        logger.trace(f' Evaluate on OOF (out of fold):\n{metrics}')
+        logger.trace(f' Fold information:\n{fold_info}')
+
+    def save_result(self, path: Path):
+        logger.info(
+            f'====Training completed - Model: {self.model_name}, Target: {self.target_col}===='
+        )
+        logger.info(f'  OOF metrics:\n{self.oof_metrics}')
+
+        # self.oof_predictions: 全部测试集上的预测结果
+        # self.fold_infos: 外CV每一折在测试集上的信息，包括最优参数、指标等信息
+        # self.oof_metrics: 在全部测试集上的指标
+        model_name = self.model_name.replace(' ', '_')
+        self.oof_predictions.to_csv(path / f'oof_predictions_of_{model_name}.csv')
+        logger.info('   The prediction results of OOF have been saved in table oof_predictions.csv')
+        with (path / f'fold_infos_of_{model_name}.json').open('w') as f:
+            json.dump(
+                [asdict(fold_info) for fold_info in self.fold_infos],
+                f,
+                indent=4,
+                ensure_ascii=False,
             )
-            print(' Evaluate on OOF (out of fold):')
-            print(metrics)
-            print(' Fold information:')
-            print(fold_info)
-
-    def report(self):
-        print(f'====Training completed - Model: {self.model_name}, Target: {self.target_col}====')
-        print(self.oof_metrics)
-        print()
-
-    def save_result(self, path):
-        # TODO:保存训练结果
-        with open(path, 'w') as f:
-            print(self.oof_metrics, file=f)
+        logger.info('   The relevant information for each fold has been saved in fold_infos.json')
+        with (path / f'oof_metrics_of_{model_name}.json').open('w') as f:
+            oof_metrics = asdict(self.oof_metrics)
+            oof_metrics.pop('oof_predictions')
+            json.dump(oof_metrics, f, indent=4, ensure_ascii=False)
+        logger.info(
+            '   The metrics calculated using the predictions on OOF have been saved in oof_metrics.json'
+        )
 
 
 class ModelComparator:
