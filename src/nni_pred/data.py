@@ -273,7 +273,7 @@ class MergedTabularDataset:
         if data_path is None:
             data_path = Path(__file__).parents[2] / 'datasets/merged_data.csv'
         assert data_path.exists(), f'data path {data_path} doesnot exists.'
-        self.df = pd.read_csv(data_path)
+        self.df = pd.read_csv(data_path, index_col='ID')
         self.groups = self._create_groups()
         self.feature_groups = get_feature_groups()
         self._validate_features()
@@ -345,7 +345,7 @@ class MergedTabularDataset:
             assert col in self.df.columns
 
         for col in self.feature_groups.metadata:
-            assert col in self.df.columns
+            assert col in self.df.columns or col == self.df.index.name
 
         for col in self.feature_groups.categorical:
             assert self.df.columns.str.startswith(col).any()

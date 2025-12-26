@@ -183,7 +183,7 @@ class Evaluator:
             df = X.copy()
             df[self.target_col] = y_true
             df[self.target_col + '_pred'] = y_pred
-            self.oof_predictions = pd.concat([self.oof_predictions, df], ignore_index=True)
+            self.oof_predictions = pd.concat([self.oof_predictions, df])
 
         metrics = Metrics.from_predictions(y_true, y_pred, offset)
         fold_info = FoldInformation(
@@ -212,7 +212,7 @@ class Evaluator:
         # self.fold_infos: 外CV每一折在测试集上的信息，包括最优参数、指标等信息
         # self.oof_metrics: 在全部测试集上的指标
         model_name = self.model_name.replace(' ', '_')
-        self.oof_predictions.to_csv(path / f'oof_predictions_of_{model_name}.csv')
+        self.oof_predictions.to_csv(path / f'oof_predictions_of_{model_name}.csv', index=True)
         logger.info('   The prediction results of OOF have been saved in table oof_predictions.csv')
         with (path / f'fold_infos_of_{model_name}.json').open('w') as f:
             json.dump(
