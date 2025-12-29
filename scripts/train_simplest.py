@@ -23,14 +23,13 @@ def main():
     match args.model_type:
         case 'linear':
             builder = ElasticNetBuilder()
-            model_name = 'Elastic Net Regressor'
         case 'rf':
             builder = RandomForestBuilder()
-            model_name = 'Random Forest Regressor'
         case 'xgb':
             builder = XGBoostBuilder()
-            model_name = 'XGBoost Regressor'
 
+    model_name = builder.model_name
+    model_type = builder.model_type
     dataset = MergedTabularDataset()
     X, y_dict, groups = dataset.prepare_data()
     param_grid = builder.get_default_param_grid(args.size)
@@ -46,7 +45,7 @@ def main():
         # Step 1: Nested CV
         logger.info(f'Training {model_name} Predictor for {target}...')
         outer_cv = GroupKFold(5, shuffle=True, random_state=args.seed)
-        evaluator = Evaluator(target, model_name=model_name, k_fold=5)
+        evaluator = Evaluator(target, model_name=model_name, model_type=model_type, k_fold=5)
 
         for idx, (train_val_idx, test_idx) in enumerate(outer_cv.split(X, y, groups)):
             train_val_X = X.iloc[train_val_idx]

@@ -54,19 +54,10 @@ class Trainer:
         self.outer_k_fold = outer_k_fold
         self.inner_k_fold = inner_k_fold
 
-        self.model_map = {
-            'linear': {
-                'model_name': 'Elastic Net Regressor',
-                'builder': ElasticNetBuilder(),
-            },
-            'rf': {
-                'model_name': 'Random Forest Regressor',
-                'builder': RandomForestBuilder(),
-            },
-            'xgb': {
-                'model_name': 'XGBoost Regressor',
-                'builder': XGBoostBuilder(),
-            },
+        self.model_builder = {
+            'linear': ElasticNetBuilder(),
+            'rf': RandomForestBuilder(),
+            'xgb': XGBoostBuilder(),
         }
 
     def train(
@@ -85,9 +76,9 @@ class Trainer:
         output_path = self.output_path / f'{target}'
         output_path.mkdir(parents=True, exist_ok=True)
 
-        for model in model_list:
-            self.run_nested_cv(target, model, X, y, groups, random_state, output_path=target)
-            self.run_final_train(target, model, X, y, groups, random_state, output_path=target)
+        for model_tp in model_list:
+            self.run_nested_cv(target, model_tp, X, y, groups, random_state, output_path=target)
+            self.run_final_train(target, model_tp, X, y, groups, random_state, output_path=target)
 
         logger.info('Done.')
 
@@ -98,14 +89,14 @@ class Trainer:
             output_path = self.output_path / output_path
         output_path.mkdir(parents=True, exist_ok=True)
 
-        model_name = self.model_map[model_type]['model_name']
-        model_builder = self.model_map[model_type]['builder']
+        model_builder = self.model_builder[model_type]
+        model_name = model_builder.model_name
         param_grid = model_builder.get_default_param_grid(self.param_size)  # type: ignore
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
         logger.info(f'(Seed={random_state}) Training {model_name} for {target}...')
         outer_cv = GroupKFold(self.outer_k_fold, shuffle=True, random_state=random_state)
-        evaluator = Evaluator(target, model_name, self.outer_k_fold)  # type: ignore
+        evaluator = Evaluator(target, model_name, model_type, self.outer_k_fold)  # type: ignore
 
         for idx, (train_val_idx, test_idx) in enumerate(outer_cv.split(X, y, groups)):
             train_val_X = X.iloc[train_val_idx]
@@ -157,8 +148,8 @@ class Trainer:
         else:
             output_path = self.output_path / output_path
 
-        model_name = self.model_map[model_type]['model_name']
-        model_builder = self.model_map[model_type]['builder']
+        model_builder = self.model_builder[model_type]
+        model_name = model_builder.model_name
         param_grid = model_builder.get_default_param_grid(self.param_size)  # type: ignore
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
@@ -182,3 +173,8 @@ class Trainer:
         model_path = output_path / f'{model_name.replace(" ", "_")}_for_{target}.joblib'  # type: ignore
         joblib.dump(best_model, model_path)
         logger.info(f'Model has been saved to {model_path}')
+
+
+class SeedSelector:
+    # TODO: 种子选择器
+    pass

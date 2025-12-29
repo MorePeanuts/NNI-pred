@@ -24,6 +24,7 @@ class Metrics:
         assert not np.isnan(y_true_log).any(), f'offset={offset}\ny_true={y_true}'
         assert not np.isnan(y_pred_log).any(), f'offset={offset}\ny_pred={y_pred}'
         # BUG:如果在TargetTransformer中使用训练的offset，可能在此处出现NaN的问题
+        # 目前暂时强制将offset设置为1，来避免NaN问题
         return cls(
             NSE_log=cls.calc_nse(y_true_log, y_pred_log),
             RSR_log=cls.calc_rsr(y_true_log, y_pred_log),
@@ -157,11 +158,13 @@ class Evaluator:
         self,
         target_col: str,
         model_name: str,
+        model_type: str,
         k_fold: int = 5,
     ):
         self.k_fold = k_fold
         self.target_col = target_col
         self.model_name = model_name
+        self.model_type = model_type
         self.fold_infos = []
 
     def update(
@@ -211,29 +214,38 @@ class Evaluator:
         # self.oof_predictions: 全部测试集上的预测结果
         # self.fold_infos: 外CV每一折在测试集上的信息，包括最优参数、指标等信息
         # self.oof_metrics: 在全部测试集上的指标
-        model_name = self.model_name.replace(' ', '_')
-        self.oof_predictions.to_csv(path / f'oof_predictions_of_{model_name}.csv', index=True)
-        logger.info('   The prediction results of OOF have been saved in table oof_predictions.csv')
-        with (path / f'fold_infos_of_{model_name}.json').open('w') as f:
+        self.oof_predictions.to_csv(path / f'oof_predictions_of_{self.model_type}.csv', index=True)
+        logger.info(
+            f'   The prediction results of OOF have been saved in table oof_predictions_of_{self.model_type}.csv'
+        )
+        with (path / f'fold_infos_of_{self.model_type}.json').open('w') as f:
             json.dump(
                 [asdict(fold_info) for fold_info in self.fold_infos],
                 f,
                 indent=4,
                 ensure_ascii=False,
             )
-        logger.info('   The relevant information for each fold has been saved in fold_infos.json')
-        with (path / f'oof_metrics_of_{model_name}.json').open('w') as f:
+        logger.info(
+            f'   The relevant information for each fold has been saved in fold_infos_of_{self.model_type}.json'
+        )
+        with (path / f'oof_metrics_of_{self.model_type}.json').open('w') as f:
             oof_metrics = asdict(self.oof_metrics)
             oof_metrics.pop('oof_predictions')
             json.dump(oof_metrics, f, indent=4, ensure_ascii=False)
         logger.info(
-            '   The metrics calculated using the predictions on OOF have been saved in oof_metrics.json'
+            f'   The metrics calculated using the predictions on OOF have been saved in oof_metrics_of_{self.model_type}.json'
         )
 
 
-class ModelComparator:
-    pass
+class Comparator:
+    def __init__(self, cv_threshold=0.5):
+        self.cv_threshold = cv_threshold
 
+    def compare_model(self, path: Path):
+        # NSE_log 的 coefficient of variance < self.cv_threshold 的情况下，取最大值
+        for oof_metrics_path in path.glob('oof_metrics_*.json'):
+            pass
+        pass
 
-class SeedSelector:
-    pass
+    def compare_seed(self):
+        pass

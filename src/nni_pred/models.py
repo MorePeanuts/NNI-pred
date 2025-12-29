@@ -11,10 +11,14 @@ from dataclasses import dataclass
 
 @dataclass
 class RandomForestConfig:
+    # TODO: 使用自定义超参数训练模型
     pass
 
 
 class ElasticNetBuilder:
+    model_name = 'Elastic Net'
+    model_type = 'linear'
+
     def __init__(
         self,
         random_state: int = 42,
@@ -48,6 +52,9 @@ class ElasticNetBuilder:
 
 
 class RandomForestBuilder:
+    model_name = 'Random Forest'
+    model_type = 'rf'
+
     def __init__(
         self,
         random_state: int = 42,
@@ -92,6 +99,9 @@ class RandomForestBuilder:
 
 
 class XGBoostBuilder:
+    model_name = 'XGBoost'
+    model_type = 'xgb'
+
     def __init__(
         self,
         objective='reg:tweedie',
