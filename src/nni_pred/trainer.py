@@ -170,7 +170,7 @@ class Trainer:
 
         final_grid_search.fit(X, y, groups=groups)
         best_model = final_grid_search.best_estimator_
-        model_path = output_path / f'{model_name.replace(" ", "_")}_for_{target}.joblib'  # type: ignore
+        model_path = output_path / f'{model_type}_model_for_{target}.joblib'  # type: ignore
         joblib.dump(best_model, model_path)
         logger.info(f'Model has been saved to {model_path}')
 
