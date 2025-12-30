@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from datetime import datetime
+from loguru import logger
 from nni_pred.trainer import Trainer, SeedSelector
 from nni_pred.data import get_feature_groups
 
@@ -10,6 +11,7 @@ def main():
     targets = feature_groups.targets
     trainer = Trainer(output_path=output_path, param_size=args.size)
     seed_selector = SeedSelector(trainer, max_attempts=args.max_attempts, seed=args.init_seed)
+    logger.remove()
 
     if 'all' in args.targets:
         seed_selector.run_exp(targets)

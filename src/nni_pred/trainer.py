@@ -1,9 +1,9 @@
-import sys
 import json
 import random
 import joblib
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from loguru import logger
 from typing import Literal
@@ -37,8 +37,6 @@ class Trainer:
         self.param_size = param_size
 
         self.log_path = self.output_path / f'full_trace_{now}.log'
-        logger.remove()
-        logger.add(sys.stderr, level='INFO')
         logger.add(self.log_path, level='TRACE')
 
         if dataset is None:
@@ -196,12 +194,18 @@ class SeedSelector:
             self.seed_set.add(self.rng.randint(1, 128000))
 
     def run_exp(self, targets: list[str]):
-        logger.info(f'All targets: {targets}')
         total_targets = len(targets)
+        pbar = tqdm(total=total_targets * len(self.seed_set))
+        logger.add(
+            lambda msg: pbar.write(msg.strip()),
+            colorize=True,
+        )
+        logger.info(f'All targets: {targets}')
         for idx, target in enumerate(targets):
-            logger.info(f'Run experiment on {target}, progress: {idx + 1}/{total_targets}')
+            pbar.set_description(f'Run experiment on {target}, progress: {idx + 1}/{total_targets}')
             for seed in self.seed_set:
                 output_path = self.trainer.train(target, random_state=seed)
+                pbar.update(1)
                 self.comparator.compare_model(output_path)
             target_path = output_path.parent
             self.comparator.compare_seed(target_path)
@@ -221,3 +225,5 @@ class SeedSelector:
                 oof_metrics = Metrics(**info['best_metrics']['oof'])
                 table_str = OOFMetrics.format_table(mean_metrics, std_metrics, oof_metrics, target)
             logger.info(f'Best seed: {best_seed}\tBest model type: {best_model_type} {table_str}')
+
+        pbar.close()
