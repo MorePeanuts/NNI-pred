@@ -1,3 +1,4 @@
+import re
 import json
 import numpy as np
 import pandas as pd
@@ -243,9 +244,73 @@ class Comparator:
 
     def compare_model(self, path: Path):
         # NSE_log 的 coefficient of variance < self.cv_threshold 的情况下，取最大值
-        for oof_metrics_path in path.glob('oof_metrics_*.json'):
-            pass
-        pass
+        nse_log_map = {}
+        metrics_map = {}
+        for oof_metrics_path in path.glob('oof_metrics_of_*.json'):
+            mt = re.search(r'^oof_metrics_of_(.+)\.json$', oof_metrics_path.name)
+            if mt:
+                model_type = mt.group(1)
+            else:
+                raise RuntimeError(f'model type doesnot found in {oof_metrics_path.name}')
+            with oof_metrics_path.open() as f:
+                oof_metrics = json.load(f)
+            cv = oof_metrics['std']['NSE_log'] / oof_metrics['mean']['NSE_log']
+            if cv <= self.cv_threshold:
+                nse_log_map[model_type] = oof_metrics['mean']['NSE_log']
+                metrics_map[model_type] = oof_metrics
 
-    def compare_seed(self):
-        pass
+        if len(nse_log_map) == 0:
+            logger.trace(f'No valid (cv_threshold={self.cv_threshold}) model.')
+            return
+
+        best_model_type = max(nse_log_map, key=nse_log_map.get)  # type: ignore
+        with (path / 'model_comparison.json').open('w') as f:
+            json.dump(
+                {
+                    'best_model_type': best_model_type,
+                    'NSE_log': nse_log_map[best_model_type],
+                    'metrics': metrics_map[best_model_type],
+                },
+                f,
+                indent=4,
+                ensure_ascii=False,
+            )
+
+    def compare_seed(self, path: Path):
+        seed_nse_log_map = {}
+        for seed_dir in path.iterdir():
+            mt = re.search(r'^seed_(\d+)', seed_dir.name)
+            if mt:
+                seed = int(mt.group(1))
+            else:
+                logger.trace(f'Pass {seed_dir}, seed not found.')
+                continue
+            model_comparison_path = seed_dir / 'model_comparison.json'
+            if not model_comparison_path.exists():
+                logger.trace(f'Pass {seed_dir}, model comparison not found.')
+                continue
+            with model_comparison_path.open() as f:
+                model_comparison = json.load(f)
+                seed_nse_log_map[seed] = model_comparison['NSE_log']
+
+        if len(seed_nse_log_map) == 0:
+            logger.trace(f'No valid (cv_threshold={self.cv_threshold}) seed.')
+            return
+
+        best_seed = max(seed_nse_log_map, key=seed_nse_log_map.get)  # type: ignore
+        with (path / f'seed_{best_seed}/model_comparison.json').open() as f:
+            model_comparison = json.load(f)
+            best_model_type = model_comparison['best_model_type']
+            best_metrics = model_comparison['metrics']
+
+        with (path / 'seed_comparison.json').open('w') as f:
+            json.dump(
+                {
+                    'best_seed': best_seed,
+                    'best_model_type': best_model_type,
+                    'best_metrics': best_metrics,
+                },
+                f,
+                indent=4,
+                ensure_ascii=False,
+            )
