@@ -1,4 +1,5 @@
 import sys
+import json
 import random
 import joblib
 import numpy as np
@@ -12,7 +13,7 @@ from sklearn.metrics import r2_score, make_scorer
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from nni_pred.data import MergedTabularDataset
-from nni_pred.evaluation import Metrics, Evaluator, Comparator
+from nni_pred.evaluation import Metrics, Evaluator, Comparator, OOFMetrics
 from nni_pred.transformers import get_feature_engineering, TargetTransformer
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 
@@ -48,7 +49,7 @@ class Trainer:
 
         if scoring is None:
             self.scoring = make_scorer(Metrics.calc_kge, greater_is_better=True)
-            logger.info('Using default scoring function: KGE')
+            logger.trace('Using default scoring function: KGE')
         else:
             self.scoring = scoring
 
@@ -79,7 +80,7 @@ class Trainer:
             output_path = self.run_nested_cv(target, model_tp, X, y, groups, random_state)
             self.run_final_train(target, model_tp, X, y, groups, random_state)
 
-        logger.info('Done.')
+        logger.info(f'Finish training {model_list} on {target} with random_state {random_state}.')
 
         return output_path
 
@@ -140,7 +141,9 @@ class Trainer:
                 best_inner_score=grid_search.best_score_,
             )
 
-        logger.info('Finished.')
+        logger.info(
+            f'Finish run nested cv of {model_type} on {target} with random_state {random_state}'
+        )
         evaluator.save_result(output_path)
 
         return output_path
@@ -193,8 +196,28 @@ class SeedSelector:
             self.seed_set.add(self.rng.randint(1, 128000))
 
     def run_exp(self, targets: list[str]):
-        for target in targets:
+        logger.info(f'All targets: {targets}')
+        total_targets = len(targets)
+        for idx, target in enumerate(targets):
+            logger.info(f'Run experiment on {target}, progress: {idx + 1}/{total_targets}')
             for seed in self.seed_set:
                 output_path = self.trainer.train(target, random_state=seed)
                 self.comparator.compare_model(output_path)
-            self.comparator.compare_seed(output_path.parent)
+            target_path = output_path.parent
+            self.comparator.compare_seed(target_path)
+
+            # Log
+            logger.info(f'{target} model training and seed selection are finished.')
+            seed_comparison_path = target_path / 'seed_comparison.json'
+            if not seed_comparison_path.exists():
+                logger.info('No best seed found.')
+                continue
+            with seed_comparison_path.open() as f:
+                info = json.load(f)
+                best_seed = info['best_seed']
+                best_model_type = info['best_model_type']
+                mean_metrics = Metrics(**info['best_metrics']['mean'])
+                std_metrics = Metrics(**info['best_metrics']['std'])
+                oof_metrics = Metrics(**info['best_metrics']['oof'])
+                table_str = OOFMetrics.format_table(mean_metrics, std_metrics, oof_metrics, target)
+            logger.info(f'Best seed: {best_seed}\tBest model type: {best_model_type} {table_str}')

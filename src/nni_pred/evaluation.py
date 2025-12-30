@@ -141,17 +141,22 @@ class OOFMetrics:
             fold_infos=fold_infos,
         )
 
-    def __repr__(self):
-        target_col = self.fold_infos[0].target_col
-        mean_dict = asdict(self.mean)
-        std_dict = asdict(self.std)
-        oof_dict = asdict(self.oof)
+    @staticmethod
+    def format_table(mean: Metrics, std: Metrics, oof: Metrics, target: str):
+        mean_dict = asdict(mean)
+        std_dict = asdict(std)
+        oof_dict = asdict(oof)
         data = [[k, oof_dict[k], mean_dict[k], std_dict[k]] for k in oof_dict.keys()]
-        title = f'OOF Metrics for {target_col}'
+        title = f'OOF Metrics for {target}'
         table = tabulate(
             data, headers=['Metric', 'OOF', 'mean', 'std'], tablefmt='fancy_grid', numalign='right'
         )
         return f'\n####{title}####\n{table}'
+
+    def __repr__(self):
+        target_col = self.fold_infos[0].target_col
+        table_str = self.format_table(self.mean, self.std, self.oof, target_col)
+        return table_str
 
 
 class Evaluator:
@@ -210,7 +215,7 @@ class Evaluator:
         logger.info(
             f'====Training completed - Model: {self.model_name}, Target: {self.target_col}===='
         )
-        logger.info(f'  OOF metrics:\n{self.oof_metrics}')
+        logger.trace(f'  OOF metrics:{self.oof_metrics}')
 
         # self.oof_predictions: 全部测试集上的预测结果
         # self.fold_infos: 外CV每一折在测试集上的信息，包括最优参数、指标等信息
