@@ -1,4 +1,5 @@
 import sys
+import random
 import joblib
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from sklearn.metrics import r2_score, make_scorer
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from nni_pred.data import MergedTabularDataset
-from nni_pred.evaluation import Metrics, Evaluator
+from nni_pred.evaluation import Metrics, Evaluator, Comparator
 from nni_pred.transformers import get_feature_engineering, TargetTransformer
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 
@@ -73,14 +74,14 @@ class Trainer:
 
         X, y_dict, groups = self.dataset.prepare_data()
         y = y_dict[target]
-        output_path = self.output_path / f'{target}'
-        output_path.mkdir(parents=True, exist_ok=True)
 
         for model_tp in model_list:
-            self.run_nested_cv(target, model_tp, X, y, groups, random_state, output_path=target)
-            self.run_final_train(target, model_tp, X, y, groups, random_state, output_path=target)
+            output_path = self.run_nested_cv(target, model_tp, X, y, groups, random_state)
+            model_path = self.run_final_train(target, model_tp, X, y, groups, random_state)
 
         logger.info('Done.')
+
+        return output_path, model_path
 
     def run_nested_cv(self, target, model_type, X, y, groups, random_state=42, output_path=None):
         if output_path is None:
@@ -142,6 +143,8 @@ class Trainer:
         logger.info('Finished.')
         evaluator.save_result(output_path)
 
+        return output_path
+
     def run_final_train(self, target, model_type, X, y, groups, random_state=42, output_path=None):
         if output_path is None:
             output_path = self.output_path / f'{target}/seed_{random_state}'
@@ -174,7 +177,24 @@ class Trainer:
         joblib.dump(best_model, model_path)
         logger.info(f'Model has been saved to {model_path}')
 
+        return model_path
+
 
 class SeedSelector:
-    # TODO: 种子选择器
-    pass
+    def __init__(self, trainer: Trainer, max_attempts=10, seed=42, cv_threshold=0.5):
+        self.trainer = trainer
+        self.max_attempts = max_attempts
+        self.seed = seed
+        self.comparator = Comparator(cv_threshold)
+        self.rng = random.Random(self.seed)
+        self.seed_set = set()
+
+        while len(self.seed_set) < max_attempts:
+            self.seed_set.add(self.rng.randint(1, 128000))
+
+    def run_exp(self, targets: list[str]):
+        for target in targets:
+            for seed in self.seed_set:
+                output_path, _ = self.trainer.train(target, random_state=seed)
+                self.comparator.compare_model(output_path)
+            self.comparator.compare_seed(output_path.parent)
