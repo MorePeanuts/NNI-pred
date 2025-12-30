@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -8,6 +9,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from .data import FeatureGroups, get_feature_groups
+
+
+warnings.filterwarnings('ignore')
 
 
 class TargetTransformer(BaseEstimator, TransformerMixin):

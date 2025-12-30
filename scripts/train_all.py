@@ -7,11 +7,12 @@ from nni_pred.data import get_feature_groups
 
 
 def main():
+    logger.remove()
+
     feature_groups = get_feature_groups()
     targets = feature_groups.targets
-    trainer = Trainer(output_path=output_path, param_size=args.size)
+    trainer = Trainer(output_path=output_path, param_size=args.size, n_jobs=args.n_jobs)
     seed_selector = SeedSelector(trainer, max_attempts=args.max_attempts, seed=args.init_seed)
-    logger.remove()
 
     if 'all' in args.targets:
         seed_selector.run_exp(targets)
@@ -26,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--targets', nargs='+', default=['all'])
     parser.add_argument('--output', type=str)
     parser.add_argument('--size', default='medium', choices=['small', 'medium', 'large'])
+    parser.add_argument('--n-jobs', default=-1, type=int)
     args = parser.parse_args()
 
     if args.output:

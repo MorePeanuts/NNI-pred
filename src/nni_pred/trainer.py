@@ -26,6 +26,7 @@ class Trainer:
         outer_k_fold: int = 5,
         inner_k_fold: int = 4,
         output_path: Path | None = None,
+        n_jobs: int = -1,
         param_size: Literal['small', 'medium', 'large'] = 'small',
     ):
         now = datetime.now().strftime('%y%m%d_%H%M%S')
@@ -35,6 +36,7 @@ class Trainer:
             self.output_path = output_path
         self.output_path.mkdir(parents=True, exist_ok=True)
         self.param_size = param_size
+        self.n_jobs = n_jobs
 
         self.log_path = self.output_path / f'full_trace_{now}.log'
         logger.add(self.log_path, level='TRACE')
@@ -126,7 +128,9 @@ class Trainer:
             )
 
             inner_cv = GroupKFold(self.inner_k_fold, shuffle=True, random_state=random_state)
-            grid_search = GridSearchCV(pipeline, param_grid, scoring=self.scoring, cv=inner_cv)
+            grid_search = GridSearchCV(
+                pipeline, param_grid, scoring=self.scoring, cv=inner_cv, n_jobs=self.n_jobs
+            )
 
             # Inner cross-validation
             grid_search.fit(train_val_X, train_val_y, groups=train_groups)
@@ -178,7 +182,9 @@ class Trainer:
             ]
         )
         final_cv = GroupKFold(self.outer_k_fold, shuffle=True, random_state=random_state)
-        final_grid_search = GridSearchCV(pipeline, param_grid, scoring=self.scoring, cv=final_cv)
+        final_grid_search = GridSearchCV(
+            pipeline, param_grid, scoring=self.scoring, cv=final_cv, n_jobs=self.n_jobs
+        )
 
         final_grid_search.fit(X, y, groups=groups)
         best_model = final_grid_search.best_estimator_
