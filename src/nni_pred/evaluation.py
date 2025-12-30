@@ -254,10 +254,13 @@ class Comparator:
                 raise RuntimeError(f'model type doesnot found in {oof_metrics_path.name}')
             with oof_metrics_path.open() as f:
                 oof_metrics = json.load(f)
-            cv = oof_metrics['std']['NSE_log'] / oof_metrics['mean']['NSE_log']
-            if cv <= self.cv_threshold:
-                nse_log_map[model_type] = oof_metrics['mean']['NSE_log']
-                metrics_map[model_type] = oof_metrics
+            try:
+                cv = oof_metrics['std']['NSE_log'] / oof_metrics['mean']['NSE_log']
+                if cv <= self.cv_threshold:
+                    nse_log_map[model_type] = oof_metrics['mean']['NSE_log']
+                    metrics_map[model_type] = oof_metrics
+            except Exception:
+                pass
 
         if len(nse_log_map) == 0:
             logger.trace(f'No valid (cv_threshold={self.cv_threshold}) model.')

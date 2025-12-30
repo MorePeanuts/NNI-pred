@@ -11,7 +11,7 @@ def main():
     trainer = Trainer(output_path=output_path, param_size=args.size)
     seed_selector = SeedSelector(trainer, max_attempts=args.max_attempts, seed=args.init_seed)
 
-    if 'all' in targets:
+    if 'all' in args.targets:
         seed_selector.run_exp(targets)
     else:
         seed_selector.run_exp([target for target in args.targets if target in targets])

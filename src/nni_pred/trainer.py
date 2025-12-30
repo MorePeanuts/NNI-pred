@@ -77,11 +77,11 @@ class Trainer:
 
         for model_tp in model_list:
             output_path = self.run_nested_cv(target, model_tp, X, y, groups, random_state)
-            model_path = self.run_final_train(target, model_tp, X, y, groups, random_state)
+            self.run_final_train(target, model_tp, X, y, groups, random_state)
 
         logger.info('Done.')
 
-        return output_path, model_path
+        return output_path
 
     def run_nested_cv(self, target, model_type, X, y, groups, random_state=42, output_path=None):
         if output_path is None:
@@ -195,6 +195,6 @@ class SeedSelector:
     def run_exp(self, targets: list[str]):
         for target in targets:
             for seed in self.seed_set:
-                output_path, _ = self.trainer.train(target, random_state=seed)
+                output_path = self.trainer.train(target, random_state=seed)
                 self.comparator.compare_model(output_path)
             self.comparator.compare_seed(output_path.parent)
