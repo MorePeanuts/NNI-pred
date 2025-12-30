@@ -65,6 +65,8 @@ class Trainer:
         target: str,
         model_type: Literal['linear', 'rf', 'xgb', 'all'] = 'all',
         random_state: int = 42,
+        run_nested_cv: bool = True,
+        run_final_train: bool = True,
     ):
         if model_type == 'all':
             model_list = ['linear', 'rf', 'xgb']
@@ -75,11 +77,17 @@ class Trainer:
         y = y_dict[target]
 
         for model_tp in model_list:
-            output_path = self.run_nested_cv(target, model_tp, X, y, groups, random_state)
-            self.run_final_train(target, model_tp, X, y, groups, random_state)
+            if run_nested_cv:
+                output_path = self.run_nested_cv(target, model_tp, X, y, groups, random_state)
+            else:
+                output_path = None
+            if run_final_train:
+                self.run_final_train(target, model_tp, X, y, groups, random_state)
 
-        logger.info(f'Finish training {model_list} on {target} with random_state {random_state}.')
-
+        if output_path:
+            logger.info(
+                f'Finish training {model_list} on {target} with random_state {random_state}.'
+            )
         return output_path
 
     def run_nested_cv(self, target, model_type, X, y, groups, random_state=42, output_path=None):
@@ -204,7 +212,7 @@ class SeedSelector:
         for idx, target in enumerate(targets):
             pbar.set_description(f'Run experiment on {target}, progress: {idx + 1}/{total_targets}')
             for seed in self.seed_set:
-                output_path = self.trainer.train(target, random_state=seed)
+                output_path = self.trainer.train(target, random_state=seed, run_final_train=False)
                 pbar.update(1)
                 self.comparator.compare_model(output_path)
             target_path = output_path.parent
@@ -225,5 +233,10 @@ class SeedSelector:
                 oof_metrics = Metrics(**info['best_metrics']['oof'])
                 table_str = OOFMetrics.format_table(mean_metrics, std_metrics, oof_metrics, target)
             logger.info(f'Best seed: {best_seed}\tBest model type: {best_model_type} {table_str}')
+
+            # Fianl train
+            self.trainer.train(
+                target, model_type=best_model_type, random_state=best_seed, run_nested_cv=False
+            )
 
         pbar.close()
