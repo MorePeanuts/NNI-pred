@@ -48,8 +48,7 @@ class Trainer:
             self.dataset = dataset
 
         if scoring is None:
-            self.scoring = make_scorer(Metrics.calc_kge, greater_is_better=True)
-            logger.trace('Using default scoring function: KGE')
+            self.scoring = 'r2'
         else:
             self.scoring = scoring
 
@@ -198,6 +197,7 @@ class Trainer:
 class SeedSelector:
     def __init__(self, trainer: Trainer, max_attempts=10, seed=42, cv_threshold=0.5):
         self.trainer = trainer
+        self.exp_root = self.trainer.output_path
         self.max_attempts = max_attempts
         self.seed = seed
         self.comparator = Comparator(cv_threshold)
@@ -244,5 +244,30 @@ class SeedSelector:
             self.trainer.train(
                 target, model_type=best_model_type, random_state=best_seed, run_nested_cv=False
             )
+
+        # experiment summary
+        rows = []
+        for target in targets:
+            target_path = self.exp_root / target / 'seed_comparison.json'
+            with target_path.open() as f:
+                s = json.load(f)
+                rows.append(
+                    {
+                        'target': target,
+                        'seed': s['best_seed'],
+                        'model': s['best_model_type'],
+                        'NSE (log)': f'{s["best_metrics"]["mean"]["NSE_log"]:.4f} ± {s["best_metrics"]["std"]["NSE_log"]:.4f}',
+                        'RSR (log)': f'{s["best_metrics"]["mean"]["RSR_log"]:.4f} ± {s["best_metrics"]["std"]["RSR_log"]:.4f}',
+                        'NSE': f'{s["best_metrics"]["mean"]["NSE"]:.4f} ± {s["best_metrics"]["std"]["NSE"]:.4f}',
+                        'RSR': f'{s["best_metrics"]["mean"]["RSR"]:.4f} ± {s["best_metrics"]["std"]["RSR"]:.4f}',
+                        'PBIAS (%)': f'{s["best_metrics"]["mean"]["PBIAS"]:.2f} ± {s["best_metrics"]["std"]["PBIAS"]:.2f}',
+                        'KGE': f'{s["best_metrics"]["mean"]["KGE"]:.4f} ± {s["best_metrics"]["std"]["KGE"]:.4f}',
+                    }
+                )
+        metrics_summary = pd.DataFrame(rows)
+        metrics_summary = metrics_summary.set_index('target')
+        logger.info(f'Summary all {total_targets} targets.\n{metrics_summary}')
+        summary_path = self.exp_root / 'metrics_summary.csv'
+        metrics_summary.to_csv(summary_path, index=True)
 
         pbar.close()
