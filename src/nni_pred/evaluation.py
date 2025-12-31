@@ -35,6 +35,16 @@ class Metrics:
             KGE=cls.calc_kge(y_true, y_pred),
         )
 
+    def to_format_dict(self):
+        return {
+            'NSE (log)': f'{self.NSE_log:.4f}',
+            'RSR (log)': f'{self.RSR_log:.4f}',
+            'NSE': f'{self.NSE:.4f}',
+            'RSR': f'{self.RSR:.4f}',
+            'PBIAS (%)': f'{self.PBIAS:.4f}',
+            'KGE': f'{self.KGE:.4f}',
+        }
+
     @staticmethod
     def calc_nse(y_true, y_pred):
         return r2_score(y_true, y_pred)
@@ -109,7 +119,7 @@ class OOFMetrics:
     @classmethod
     def from_fold_information_list(
         cls, fold_infos: list[FoldInformation], oof_predictions: pd.DataFrame
-    ):
+    ) -> 'OOFMetrics':
         target_col = fold_infos[0].target_col
         mean = Metrics(
             NSE_log=np.mean([info.metrics.NSE_log for info in fold_infos]),
@@ -140,6 +150,32 @@ class OOFMetrics:
             oof_predictions=oof_predictions,
             fold_infos=fold_infos,
         )
+
+    @classmethod
+    def from_json(cls, json_obj) -> 'OOFMetrics':
+        mean = Metrics(**json_obj['mean'])
+        std = Metrics(**json_obj['std'])
+        oof = Metrics(**json_obj['oof'])
+        oof_predictions = pd.DataFrame(json_obj['oof_predictions'])
+        oof_predictions = oof_predictions.set_index('ID')
+        fold_infos = [FoldInformation(**fold_info) for fold_info in json_obj['fold_infos']]
+        return cls(mean, std, oof, oof_predictions, fold_infos)
+
+    def to_json(self) -> dict:
+        res = asdict(self)
+        res['oof_predictions'] = res['oof_predictions'].reset_index().to_dict(orient='records')
+        return res
+
+    def calc_coefficient_of_variation(self, indicator):
+        mean = getattr(self.mean, indicator)
+        std = getattr(self.std, indicator)
+        logger.trace(f'mean={mean}, std={std}')
+        return std / mean
+
+    def to_format_dict(self) -> dict:
+        mean_dict = self.mean.to_format_dict()
+        std_dict = self.std.to_format_dict()
+        return {k: f'{mean_dict[k]} ± {std_dict[k]}' for k in mean_dict.keys()}
 
     @staticmethod
     def format_table(mean: Metrics, std: Metrics, oof: Metrics, target: str):
@@ -224,19 +260,18 @@ class Evaluator:
         logger.info(
             f'   The prediction results of OOF have been saved in table oof_predictions_of_{self.model_type}.csv'
         )
-        with (path / f'fold_infos_of_{self.model_type}.json').open('w') as f:
-            json.dump(
-                [asdict(fold_info) for fold_info in self.fold_infos],
-                f,
-                indent=4,
-                ensure_ascii=False,
-            )
-        logger.info(
-            f'   The relevant information for each fold has been saved in fold_infos_of_{self.model_type}.json'
-        )
+        # with (path / f'fold_infos_of_{self.model_type}.json').open('w') as f:
+        #     json.dump(
+        #         [asdict(fold_info) for fold_info in self.fold_infos],
+        #         f,
+        #         indent=4,
+        #         ensure_ascii=False,
+        #     )
+        # logger.info(
+        #     f'   The relevant information for each fold has been saved in fold_infos_of_{self.model_type}.json'
+        # )
         with (path / f'oof_metrics_of_{self.model_type}.json').open('w') as f:
-            oof_metrics = asdict(self.oof_metrics)
-            oof_metrics.pop('oof_predictions')
+            oof_metrics = self.oof_metrics.to_json()
             json.dump(oof_metrics, f, indent=4, ensure_ascii=False)
         logger.info(
             f'   The metrics calculated using the predictions on OOF have been saved in oof_metrics_of_{self.model_type}.json'
@@ -244,13 +279,14 @@ class Evaluator:
 
 
 class Comparator:
-    def __init__(self, cv_threshold=0.5):
+    def __init__(self, indicator='NSE_log', cv_threshold=0.5):
+        self.indicator = indicator
         self.cv_threshold = cv_threshold
 
     def compare_model(self, path: Path):
-        # NSE_log 的 coefficient of variance < self.cv_threshold 的情况下，取最大值
-        nse_log_map = {}
+        indicator_map = {}
         metrics_map = {}
+        cv_records = []
         for oof_metrics_path in path.glob('oof_metrics_of_*.json'):
             mt = re.search(r'^oof_metrics_of_(.+)\.json$', oof_metrics_path.name)
             if mt:
@@ -259,25 +295,29 @@ class Comparator:
                 raise RuntimeError(f'model type doesnot found in {oof_metrics_path.name}')
             with oof_metrics_path.open() as f:
                 oof_metrics = json.load(f)
+            oof_metrics = OOFMetrics.from_json(oof_metrics)
             try:
-                cv = oof_metrics['std']['NSE_log'] / oof_metrics['mean']['NSE_log']
+                cv = oof_metrics.calc_coefficient_of_variation(self.indicator)
+                cv_records.append(cv)
+                logger.trace(f'Coefficient of variation of {path} is {cv}')
                 if cv <= self.cv_threshold:
-                    nse_log_map[model_type] = oof_metrics['mean']['NSE_log']
+                    indicator_map[model_type] = getattr(oof_metrics.mean, self.indicator)
                     metrics_map[model_type] = oof_metrics
             except Exception:
+                logger.exception('Exception when calculate coefficient of variation.')
                 pass
 
-        if len(nse_log_map) == 0:
-            logger.trace(f'No valid (cv_threshold={self.cv_threshold}) model.')
+        if len(indicator_map) == 0:
+            logger.trace(f'No valid (cv_threshold={self.cv_threshold}) model. All cv: {cv_records}')
             return
 
-        best_model_type = max(nse_log_map, key=nse_log_map.get)  # type: ignore
+        best_model_type = max(indicator_map, key=indicator_map.get)  # type: ignore
         with (path / 'model_comparison.json').open('w') as f:
             json.dump(
                 {
                     'best_model_type': best_model_type,
-                    'NSE_log': nse_log_map[best_model_type],
-                    'metrics': metrics_map[best_model_type],
+                    self.indicator: indicator_map[best_model_type],
+                    'metrics': metrics_map[best_model_type].to_json(),
                 },
                 f,
                 indent=4,
@@ -285,7 +325,7 @@ class Comparator:
             )
 
     def compare_seed(self, path: Path):
-        seed_nse_log_map = {}
+        seed_indicator_map = {}
         for seed_dir in path.iterdir():
             mt = re.search(r'^seed_(\d+)', seed_dir.name)
             if mt:
@@ -299,13 +339,13 @@ class Comparator:
                 continue
             with model_comparison_path.open() as f:
                 model_comparison = json.load(f)
-                seed_nse_log_map[seed] = model_comparison['NSE_log']
+                seed_indicator_map[seed] = model_comparison[self.indicator]
 
-        if len(seed_nse_log_map) == 0:
+        if len(seed_indicator_map) == 0:
             logger.trace(f'No valid (cv_threshold={self.cv_threshold}) seed.')
             return
 
-        best_seed = max(seed_nse_log_map, key=seed_nse_log_map.get)  # type: ignore
+        best_seed = max(seed_indicator_map, key=seed_indicator_map.get)  # type: ignore
         with (path / f'seed_{best_seed}/model_comparison.json').open() as f:
             model_comparison = json.load(f)
             best_model_type = model_comparison['best_model_type']

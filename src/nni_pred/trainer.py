@@ -200,7 +200,7 @@ class SeedSelector:
         self.exp_root = self.trainer.output_path
         self.max_attempts = max_attempts
         self.seed = seed
-        self.comparator = Comparator(cv_threshold)
+        self.comparator = Comparator(cv_threshold=cv_threshold)
         self.rng = random.Random(self.seed)
         self.seed_set = set()
 
@@ -234,11 +234,10 @@ class SeedSelector:
                 info = json.load(f)
                 best_seed = info['best_seed']
                 best_model_type = info['best_model_type']
-                mean_metrics = Metrics(**info['best_metrics']['mean'])
-                std_metrics = Metrics(**info['best_metrics']['std'])
-                oof_metrics = Metrics(**info['best_metrics']['oof'])
-                table_str = OOFMetrics.format_table(mean_metrics, std_metrics, oof_metrics, target)
-            logger.info(f'Best seed: {best_seed}\tBest model type: {best_model_type} {table_str}')
+                best_metrics = OOFMetrics.from_json(info['best_metrics'])
+            logger.info(
+                f'Best seed: {best_seed}\tBest model type: {best_model_type} {best_metrics}'
+            )
 
             # Fianl train
             self.trainer.train(
@@ -251,19 +250,11 @@ class SeedSelector:
             target_path = self.exp_root / target / 'seed_comparison.json'
             with target_path.open() as f:
                 s = json.load(f)
-                rows.append(
-                    {
-                        'target': target,
-                        'seed': s['best_seed'],
-                        'model': s['best_model_type'],
-                        'NSE (log)': f'{s["best_metrics"]["mean"]["NSE_log"]:.4f} ± {s["best_metrics"]["std"]["NSE_log"]:.4f}',
-                        'RSR (log)': f'{s["best_metrics"]["mean"]["RSR_log"]:.4f} ± {s["best_metrics"]["std"]["RSR_log"]:.4f}',
-                        'NSE': f'{s["best_metrics"]["mean"]["NSE"]:.4f} ± {s["best_metrics"]["std"]["NSE"]:.4f}',
-                        'RSR': f'{s["best_metrics"]["mean"]["RSR"]:.4f} ± {s["best_metrics"]["std"]["RSR"]:.4f}',
-                        'PBIAS (%)': f'{s["best_metrics"]["mean"]["PBIAS"]:.2f} ± {s["best_metrics"]["std"]["PBIAS"]:.2f}',
-                        'KGE': f'{s["best_metrics"]["mean"]["KGE"]:.4f} ± {s["best_metrics"]["std"]["KGE"]:.4f}',
-                    }
-                )
+                best_metrics = OOFMetrics.from_json(s['best_metrics'])
+                row = {'target': target, 'seed': s['best_seed'], 'model': s['best_model_type']}
+                row.update(best_metrics.to_format_dict())
+                rows.append(row)
+
         metrics_summary = pd.DataFrame(rows)
         metrics_summary = metrics_summary.set_index('target')
         logger.info(f'Summary all {total_targets} targets.\n{metrics_summary}')
