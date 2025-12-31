@@ -327,6 +327,8 @@ class Comparator:
     def compare_seed(self, path: Path):
         seed_indicator_map = {}
         for seed_dir in path.iterdir():
+            if not seed_dir.is_dir():
+                continue
             mt = re.search(r'^seed_(\d+)', seed_dir.name)
             if mt:
                 seed = int(mt.group(1))
