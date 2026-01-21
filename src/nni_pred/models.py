@@ -1,3 +1,9 @@
+"""
+This script defines several candidate model constructors and a hyperparameter grid.
+
+Candidate models include linear models, random forests, and XGBoost.
+"""
+
 import pickle
 import pandas as pd
 import numpy as np
@@ -7,12 +13,6 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNet
 from dataclasses import dataclass
-
-
-@dataclass
-class RandomForestConfig:
-    # TODO: 使用自定义超参数训练模型
-    pass
 
 
 class ElasticNetBuilder:

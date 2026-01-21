@@ -1,3 +1,10 @@
+"""
+This script invokes the encapsulated trainer and seed selector for the formal execution of experiments,
+ aiming to identify the optimal seeds and training outcomes.
+
+The script does not include visualization steps.
+"""
+
 import argparse
 from pathlib import Path
 from datetime import datetime

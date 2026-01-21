@@ -1,3 +1,7 @@
+"""
+This script is used to split the raw data from raw_data.xlsx into soil_data.csv and water_data.csv.
+"""
+
 import pandas as pd
 from pathlib import Path
 

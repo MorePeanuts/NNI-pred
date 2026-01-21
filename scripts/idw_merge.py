@@ -1,3 +1,12 @@
+"""
+This script is used to merge the data from soil_data.csv and water_data.csv using the Inverse Distance Weighting (IDW) algorithm to obtain the merged_data.csv file.
+
+For each water body sample point, find all soil sample points within a distance of 30 km. Use IDW2 (p=2) weighted averaging for some features,
+ and for another set of features, take the characteristics of the nearest soil sample point.
+
+The aggregated features are named Soil_{feature}_{agg} or Soil_{feature}.
+"""
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -65,7 +74,7 @@ def find_neighbors_within_radius(
     # Calculate distances to all soil samples in the same season
     distances = np.array(
         [
-            haversine_distance(water_lon, water_lat, row['Lon'], row['Lat'])  # type: ignore
+            haversine_distance(water_lon, water_lat, row['Lon'], row['Lat'])
             for _, row in soil_season.iterrows()
         ]
     )
@@ -80,7 +89,7 @@ def find_neighbors_within_radius(
             f'No soil samples found within {radius_km}km radius for season {water_season}'
         )
 
-    return neighbors, neighbor_distances  # type: ignore
+    return neighbors, neighbor_distances
 
 
 def aggregate_soil_features_idw(

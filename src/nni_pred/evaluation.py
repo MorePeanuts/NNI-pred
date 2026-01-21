@@ -1,3 +1,7 @@
+"""
+Contains code for metric evaluation and model comparison.
+"""
+
 import re
 import json
 import numpy as np
@@ -11,6 +15,10 @@ from pathlib import Path
 
 @dataclass
 class Metrics:
+    """
+    The most basic set of evaluation metrics, along with the calculation methods for these metrics.
+    """
+
     NSE_log: float
     RSR_log: float
     NSE: float
@@ -93,6 +101,12 @@ class Metrics:
 
 @dataclass
 class FoldInformation:
+    """
+    This class records the information of one fold in the outer cross-validation, including
+     the optimal hyperparameters identified by the inner cross-validation, evaluation metrics
+     on the test set, and other related information.
+    """
+
     fold: int
     best_param: dict
     metrics: Metrics
@@ -110,6 +124,13 @@ class FoldInformation:
 
 @dataclass
 class OOFMetrics:
+    """
+    Out-of-fold evaluation metrics include outer cross-validation, the average and standard
+     deviation of metrics on the test set for each fold, and retain all prediction results
+     on the test set to calculate out-of-fold metrics, while also saving relevant information
+     for each fold.
+    """
+
     mean: Metrics
     std: Metrics
     oof: Metrics
@@ -279,11 +300,18 @@ class Evaluator:
 
 
 class Comparator:
+    """
+    Compare the effects of different models and different random seeds.
+    """
+
     def __init__(self, indicator='NSE_log', cv_threshold=0.5):
         self.indicator = indicator
         self.cv_threshold = cv_threshold
 
     def compare_model(self, path: Path):
+        """
+        Under the same seed experiment, select the one with the best metrics among different models.
+        """
         indicator_map = {}
         metrics_map = {}
         cv_records = []
@@ -297,6 +325,8 @@ class Comparator:
                 oof_metrics = json.load(f)
             oof_metrics = OOFMetrics.from_json(oof_metrics)
             try:
+                # WARNING: The value of the indicator may be negative, which could lead to distortion in
+                # the cv. However, since the maximum indicator will be selected later, this issue can be ignored?
                 cv = oof_metrics.calc_coefficient_of_variation(self.indicator)
                 cv_records.append(cv)
                 logger.trace(f'Coefficient of variation of {path} is {cv}')
@@ -325,6 +355,9 @@ class Comparator:
             )
 
     def compare_seed(self, path: Path):
+        """
+        Among different seeds, select the best seed based on the performance of the best model under each seed.
+        """
         seed_indicator_map = {}
         for seed_dir in path.iterdir():
             if not seed_dir.is_dir():

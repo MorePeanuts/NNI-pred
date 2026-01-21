@@ -1,3 +1,9 @@
+"""
+This script includes a trainer and a seed selector. The former defines the basic training loop (including
+ the invocation of data processing functions), while the latter defines the method for selecting the best
+ results from experiments with multiple random seeds.
+"""
+
 import json
 import random
 import joblib
@@ -100,12 +106,12 @@ class Trainer:
 
         model_builder = self.model_builder[model_type]
         model_name = model_builder.model_name
-        param_grid = model_builder.get_default_param_grid(self.param_size)  # type: ignore
+        param_grid = model_builder.get_default_param_grid(self.param_size)
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
         logger.info(f'(Seed={random_state}) Training {model_name} for {target}...')
         outer_cv = GroupKFold(self.outer_k_fold, shuffle=True, random_state=random_state)
-        evaluator = Evaluator(target, model_name, model_type, self.outer_k_fold)  # type: ignore
+        evaluator = Evaluator(target, model_name, model_type, self.outer_k_fold)
 
         for idx, (train_val_idx, test_idx) in enumerate(outer_cv.split(X, y, groups)):
             train_val_X = X.iloc[train_val_idx]
@@ -114,9 +120,9 @@ class Trainer:
             test_y = y.iloc[test_idx]
             train_groups = groups[train_val_idx]
 
-            feature_engineering = get_feature_engineering(model_type, random_state)  # type: ignore
+            feature_engineering = get_feature_engineering(model_type, random_state)
             regressor = TransformedTargetRegressor(
-                model_builder.get_regressor(),  # type: ignore
+                model_builder.get_regressor(),
                 transformer=TargetTransformer(1),
             )
             pipeline = Pipeline(
@@ -165,13 +171,13 @@ class Trainer:
 
         model_builder = self.model_builder[model_type]
         model_name = model_builder.model_name
-        param_grid = model_builder.get_default_param_grid(self.param_size)  # type: ignore
+        param_grid = model_builder.get_default_param_grid(self.param_size)
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
         logger.info(f'(Seed={random_state}) Training {model_name} for {target} on all data...')
-        feature_engineering = get_feature_engineering(model_type, random_state)  # type: ignore
+        feature_engineering = get_feature_engineering(model_type, random_state)
         regressor = TransformedTargetRegressor(
-            model_builder.get_regressor(),  # type: ignore
+            model_builder.get_regressor(),
             transformer=TargetTransformer(1),
         )
         pipeline = Pipeline(
@@ -187,7 +193,7 @@ class Trainer:
 
         final_grid_search.fit(X, y, groups=groups)
         best_model = final_grid_search.best_estimator_
-        model_path = output_path / f'{model_type}_model_for_{target}.joblib'  # type: ignore
+        model_path = output_path / f'{model_type}_model_for_{target}.joblib'
         joblib.dump(best_model, model_path)
         logger.info(f'Model has been saved to {model_path}')
 
@@ -228,7 +234,6 @@ class SeedSelector:
             logger.info(f'{target} model training and seed selection are finished.')
             seed_comparison_path = target_path / 'seed_comparison.json'
             if not seed_comparison_path.exists():
-                logger.info('No best seed found.')
                 continue
             with seed_comparison_path.open() as f:
                 info = json.load(f)
@@ -248,6 +253,9 @@ class SeedSelector:
         rows = []
         for target in targets:
             target_path = self.exp_root / target / 'seed_comparison.json'
+            if not target_path.exists():
+                logger.warning(f'No best seed found in {target_path.parent}.')
+                continue
             with target_path.open() as f:
                 s = json.load(f)
                 best_metrics = OOFMetrics.from_json(s['best_metrics'])

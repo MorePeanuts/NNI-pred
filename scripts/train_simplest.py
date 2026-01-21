@@ -1,5 +1,9 @@
 """
-Perform a simplest nested spatial cross-validation using the random forest model.
+Perform a simplest nested spatial cross-validation using the specified model.
+
+This script is used to explore the simplest training loop (including data processing, feature engineering, etc.)
+
+WARNING: This script will not be modified once it runs successfully.
 """
 
 import sys
@@ -33,7 +37,7 @@ def main():
     dataset = MergedTabularDataset()
     X, y_dict, groups = dataset.prepare_data()
     param_grid = builder.get_default_param_grid(args.size)
-    custom_scoring = make_scorer(Metrics.calc_kge, greater_is_better=True)
+    custom_scoring = make_scorer(Metrics.calc_nse, greater_is_better=True)
     param_grid_pipeline = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
     for _, (target, y) in enumerate(y_dict.items()):
@@ -117,7 +121,9 @@ def main():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Perform a simplest nested spatial cross-validation using the specified model.'
+    )
     parser.add_argument('model_type', choices=['linear', 'rf', 'xgb'])
     parser.add_argument(
         '--size',
