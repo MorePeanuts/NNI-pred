@@ -1,4 +1,5 @@
 import json
+import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,6 +7,7 @@ from pathlib import Path
 from collections.abc import Iterable
 from nni_pred.data import get_feature_groups
 from nni_pred.evaluation import Metrics, OOFMetrics
+from nni_pred.transformers import TargetTransformer
 
 
 class Visualizer:
@@ -43,7 +45,7 @@ class Visualizer:
             metrics_used: 展示的指标列表
         """
         if data is None:
-            data = self.oof_data
+            data = copy.deepcopy(self.oof_data)
         output_path = (
             self.exp_root / f'metrics_bar_chart{"_" + output_suffix if output_suffix else ""}.png'
         )
@@ -66,7 +68,11 @@ class Visualizer:
         figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
 
         fig, axes = plt.subplots(*figshape, figsize=figsize)
-        for ax, metrics in zip(axes, metrics_used, strict=False):
+        for i, metrics in enumerate(metrics_used):
+            if figshape[0] > 1:
+                ax = axes[i // figshape[0]][i % figshape[0]]
+            else:
+                ax = axes[i]
             bar = ax.barh(y_pos, df_mean[metrics], alpha=0.7, edgecolor='black')
             ax.errorbar(
                 df_mean[metrics],
@@ -124,12 +130,88 @@ class Visualizer:
 
     def plot_scatter_identity(
         self,
+        data: dict[str, tuple[str, OOFMetrics]] | None = None,
+        targets_used: Iterable[str] | None = None,
+        use_log: bool = False,
         output_suffix: str | None = None,
     ):
+        """
+        plot measured vs predicted plots.
+        """
+        if data is None:
+            data = copy.deepcopy(self.oof_data)
         output_path = (
             self.exp_root
             / f'measured_vs_predicted{"_" + output_suffix if output_suffix else ""}.png'
         )
+        if targets_used is not None:
+            for target in list(data.keys()):
+                if target not in targets_used:
+                    data.pop(target)
+
+        if use_log:
+            trans = TargetTransformer(1)
+            for target, (_, oof_metrics) in data.items():
+                predictions = oof_metrics.oof_predictions
+                predictions[f'log_{target}'] = trans.transform(predictions[target])
+                predictions[f'log_{target}_pred'] = trans.transform(predictions[f'{target}_pred'])
+
+        total_plots = len(data)
+        figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
+        fig, axes = plt.subplots(*figshape, figsize=figsize)
+        season_colors = {
+            'Dry': '#e74c3c',  # Red
+            'Normal': '#f39c12',  # Orange
+            'Rainy': '#3498db',  # Blue
+        }
+
+        is_first = True
+        for i, (target, (_, oof_metrics)) in enumerate(data.items()):
+            if figshape[0] > 1:
+                ax = axes[i // figshape[0]][i % figshape[0]]
+            else:
+                ax = axes[i]
+            predictions = oof_metrics.oof_predictions
+            r2 = oof_metrics.oof.NSE_log
+            y_true = predictions[f'log_{target}'] if use_log else predictions[target]
+            y_pred = predictions[f'log_{target}_pred'] if use_log else predictions[f'{target}_pred']
+
+            for season, color in season_colors.items():
+                preds = predictions[predictions[f'Season_{season}'] > 0]
+                ax.scatter(
+                    preds[f'log_{target}'] if use_log else preds[target],
+                    preds[f'log_{target}_pred'] if use_log else preds[f'{target}_pred'],
+                    c=color,
+                    label=season if is_first else '',
+                    alpha=0.6,
+                    edgecolors='black',
+                    linewidth=0.3,
+                    s=30,
+                )
+
+            max_val = max(y_true.max(), y_pred.max())
+            min_val = min(y_true.min(), y_pred.min())
+            ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1.5, alpha=0.5)
+
+            ax.set_title(f'{target}\n(R²={r2:.3f}, (log))', fontsize=11, fontweight='bold')
+            ax.set_xlabel('Measured', fontsize=10)
+            ax.set_ylabel('Predicted', fontsize=10)
+            ax.grid(alpha=0.3, linestyle='--')
+
+            if is_first:
+                ax.legend(loc='best', fontsize=8)
+
+            is_first = False
+
+        fig.suptitle(
+            'Measured vs Predicted (Out-of-Fold)',
+            fontsize=16,
+            fontweight='bold',
+            y=0.995,
+        )
+        plt.tight_layout(rect=[0, 0, 1, 0.99])
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
     def plot_shap_summary(
         self,
@@ -198,7 +280,7 @@ class Visualizer:
         elif total_plots == 8:
             return (2, 4), (20, 14)
         elif total_plots == 9:
-            return (3, 3), (15, 20)
+            return (3, 3), (15, 15)
         elif total_plots == 10:
             return (2, 5), (25, 14)
         elif total_plots == 11:
