@@ -54,6 +54,22 @@ class Metrics:
         }
 
     @staticmethod
+    def get_metrics_repr(ind):
+        match ind:
+            case 'NSE_log':
+                return 'NSE (log)'
+            case 'RSR_log':
+                return 'RSR (log)'
+            case 'NSE':
+                return 'NSE'
+            case 'RSR':
+                return 'RSR'
+            case 'PBIAS':
+                return 'PBIAS (%)'
+            case 'KGE':
+                return 'KGE'
+
+    @staticmethod
     def calc_nse(y_true, y_pred):
         return r2_score(y_true, y_pred)
 
@@ -397,3 +413,8 @@ class Comparator:
                 indent=4,
                 ensure_ascii=False,
             )
+
+
+class ShapAnalyst:
+    def __init__(self):
+        pass

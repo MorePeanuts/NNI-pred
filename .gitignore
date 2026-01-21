@@ -10,6 +10,8 @@ wheels/
 .venv
 
 datasets
-output
+output/**/*
+!output/**/
+!output/**/*.png
 **/.DS_Store
 temp/
