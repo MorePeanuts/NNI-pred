@@ -20,8 +20,9 @@ def main():
         logger.info(f'Processing {target_dir.name}: {len(seed_dirs)} seeds')
 
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = [executor.submit(comparator.compare_model, seed_dir)
-                       for seed_dir in seed_dirs]
+            futures = [
+                executor.submit(comparator.compare_model, seed_dir) for seed_dir in seed_dirs
+            ]
             for future in as_completed(futures):
                 future.result()
 

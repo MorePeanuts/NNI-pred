@@ -13,18 +13,18 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNet
 from dataclasses import dataclass
+from .transformers import get_feature_engineering, TargetTransformer
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
 
 
 class ElasticNetBuilder:
     model_name = 'Elastic Net'
     model_type = 'linear'
 
-    def __init__(
-        self,
-        random_state: int = 42,
-        **kwargs,
-    ):
-        self.random_state = random_state
+    def __init__(self):
+        super().__init__()
 
     def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
         match scale:
@@ -47,8 +47,14 @@ class ElasticNetBuilder:
                     'max_iter': [10000],
                 }
 
-    def get_regressor(self):
-        return ElasticNet(random_state=self.random_state)
+    def get_regressor(self, random_state: int = 42):
+        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        regressor = TransformedTargetRegressor(
+            ElasticNet(random_state=random_state),
+            transformer=TargetTransformer(1),
+        )
+        pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
+        return pipeline
 
 
 class RandomForestBuilder:
@@ -57,11 +63,9 @@ class RandomForestBuilder:
 
     def __init__(
         self,
-        random_state: int = 42,
         n_jobs: int = -1,
         **kwargs,
     ):
-        self.random_state = random_state
         self.n_jobs = n_jobs
 
     def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
@@ -91,11 +95,16 @@ class RandomForestBuilder:
                     'max_features': ['sqrt', 'log2'],
                 }
 
-    def get_regressor(self):
-        return RandomForestRegressor(
-            random_state=self.random_state,
-            n_jobs=self.n_jobs,
+    def get_regressor(self, random_state: int = 42):
+        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        regressor = TransformedTargetRegressor(
+            RandomForestRegressor(random_state=random_state, n_jobs=self.n_jobs),
+            transformer=TargetTransformer(1),
+            # TODO: try identical transformer:
+            # transformer=FunctionTransformer(),
         )
+        pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
+        return pipeline
 
 
 class XGBoostBuilder:
@@ -106,12 +115,10 @@ class XGBoostBuilder:
         self,
         objective='reg:tweedie',
         tree_method='hist',
-        random_state: int = 42,
         **kwargs,
     ):
         self.objective = objective
         self.tree_method = tree_method
-        self.random_state = random_state
 
     def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
         match scale:
@@ -149,9 +156,15 @@ class XGBoostBuilder:
                     'tweedie_variance_power': [1.2, 1.5, 1.8],
                 }
 
-    def get_regressor(self):
-        return XGBRegressor(
-            objective=self.objective,
-            tree_method=self.tree_method,
-            random_state=self.random_state,
+    def get_regressor(self, random_state: int = 42):
+        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        regressor = TransformedTargetRegressor(
+            XGBRegressor(
+                objective=self.objective, tree_method=self.tree_method, random_state=random_state
+            ),
+            transformer=TargetTransformer(1),
+            # TODO: try identical transformer:
+            # transformer=FunctionTransformer(),
         )
+        pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
+        return pipeline

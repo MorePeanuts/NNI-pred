@@ -14,13 +14,10 @@ from pathlib import Path
 from loguru import logger
 from typing import Literal
 from datetime import datetime
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, make_scorer
-from sklearn.compose import TransformedTargetRegressor
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from nni_pred.data import MergedTabularDataset
 from nni_pred.evaluation import Metrics, Evaluator, Comparator, OOFMetrics
-from nni_pred.transformers import get_feature_engineering, TargetTransformer
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 
 
@@ -120,17 +117,7 @@ class Trainer:
             test_y = y.iloc[test_idx]
             train_groups = groups[train_val_idx]
 
-            feature_engineering = get_feature_engineering(model_type, random_state)
-            regressor = TransformedTargetRegressor(
-                model_builder.get_regressor(),
-                transformer=TargetTransformer(1),
-            )
-            pipeline = Pipeline(
-                [
-                    ('prep', feature_engineering),
-                    ('model', regressor),
-                ]
-            )
+            pipeline = model_builder.get_regressor(random_state)
 
             inner_cv = GroupKFold(self.inner_k_fold, shuffle=True, random_state=random_state)
             grid_search = GridSearchCV(
@@ -175,17 +162,8 @@ class Trainer:
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
         logger.info(f'(Seed={random_state}) Training {model_name} for {target} on all data...')
-        feature_engineering = get_feature_engineering(model_type, random_state)
-        regressor = TransformedTargetRegressor(
-            model_builder.get_regressor(),
-            transformer=TargetTransformer(1),
-        )
-        pipeline = Pipeline(
-            [
-                ('prep', feature_engineering),
-                ('model', regressor),
-            ]
-        )
+        pipeline = model_builder.get_regressor(random_state)
+
         final_cv = GroupKFold(self.outer_k_fold, shuffle=True, random_state=random_state)
         final_grid_search = GridSearchCV(
             pipeline, param_grid, scoring=self.scoring, cv=final_cv, n_jobs=self.n_jobs

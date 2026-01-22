@@ -413,8 +413,3 @@ class Comparator:
                 indent=4,
                 ensure_ascii=False,
             )
-
-
-class ShapAnalyst:
-    def __init__(self):
-        pass
