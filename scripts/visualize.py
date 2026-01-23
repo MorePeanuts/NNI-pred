@@ -33,5 +33,5 @@ visualizer = Visualizer(exp_path)
 #     targets_used=['parentNNIs', 'mNNIs'], output_suffix='total_log', use_log=True
 # )
 # visualizer.plot_scatter_identity(targets_used=['parentNNIs', 'mNNIs'], output_suffix='total')
-visualizer.plot_shap_importance()
-visualizer.plot_shap_summary()
+visualizer.plot_shap_importance(targets_used=['parentNNIs', 'mNNIs'])
+visualizer.plot_shap_summary(targets_used=['parentNNIs', 'mNNIs'])

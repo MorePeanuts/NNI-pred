@@ -99,6 +99,12 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         assert isinstance(self.feature_groups, FeatureGroups)
         return self.feature_groups.group2_agro + self.feature_groups.group3_socio
 
+    def get_feature_names_out(self, input_features=None):
+        return np.array(
+            [f'agro_comp_{i}' for i in range(self.group2_pca_.n_components_)]
+            + [f'socio_comp_{i}' for i in range(self.group3_pca_.n_components_)]
+        )
+
     def get_pca_summary(self):
         assert hasattr(self, 'group2_pca_') and hasattr(self, 'group3_pca_')
         return {

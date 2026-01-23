@@ -36,7 +36,9 @@ class Visualizer:
             model_type = self.explorer.get_best_model_type(target)
             features = self.explorer.get_features(target)
             features_transformed = preprocessor.transform(features)
-            self.features[target] = features_transformed
+            features_name = preprocessor.get_feature_names_out()
+            features_name = np.array([name.split('__')[1] for name in features_name])
+            self.features[target] = pd.DataFrame(features_transformed, columns=features_name)
             match model_type:
                 case 'xgb':
                     explainer = shap.Explainer(model.predict, features_transformed)
@@ -253,9 +255,14 @@ class Visualizer:
             self.exp_root / f'shap_summary{"_" + output_suffix if output_suffix else ""}.png'
         )
 
-        total_plots = len(shap_values)
+        total_plots = len(targets_used) if targets_used else len(shap_values)
         figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
         fig, axes = plt.subplots(*figshape, figsize=figsize)
+
+        if targets_used:
+            for target in list(shap_values.keys()):
+                if target not in targets_used:
+                    shap_values.pop(target)
 
         for i, (target, sp_values) in enumerate(shap_values.items()):
             if figshape[0] > 1:
@@ -264,7 +271,7 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.features[target]
-            shap.summary_plot(sp_values, features, plot_type='dot', show=False)
+            shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Dot Summary Plot',
@@ -280,6 +287,7 @@ class Visualizer:
         self,
         shap_values=None,
         data=None,
+        targets_used=None,
         output_suffix: str | None = None,
     ):
         if shap_values is None:
@@ -288,9 +296,14 @@ class Visualizer:
             self.exp_root / f'shap_importance{"_" + output_suffix if output_suffix else ""}.png'
         )
 
-        total_plots = len(shap_values)
+        total_plots = len(targets_used) if targets_used else len(shap_values)
         figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
         fig, axes = plt.subplots(*figshape, figsize=figsize)
+
+        if targets_used:
+            for target in list(shap_values.keys()):
+                if target not in targets_used:
+                    shap_values.pop(target)
 
         for i, (target, sp_values) in enumerate(shap_values.items()):
             if figshape[0] > 1:
@@ -299,7 +312,8 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.features[target]
-            shap.summary_plot(sp_values, features, plot_type='bar', show=False)
+            print(features.columns)
+            shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Importance Plot',
@@ -348,7 +362,7 @@ class Visualizer:
         if total_plots == 1:
             return (1, 1), (5, 8)
         elif total_plots == 2:
-            return (1, 2), (10, 8)
+            return (1, 2), (8, 15)
         elif total_plots == 3:
             return (1, 3), (15, 8)
         elif total_plots == 4:
