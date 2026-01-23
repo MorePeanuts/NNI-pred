@@ -1,5 +1,7 @@
+import shap
 import json
 import copy
+import joblib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,28 +10,43 @@ from collections.abc import Iterable
 from nni_pred.data import get_feature_groups
 from nni_pred.evaluation import Metrics, OOFMetrics
 from nni_pred.transformers import TargetTransformer
+from nni_pred.utils import Explorer
 
 
 class Visualizer:
     def __init__(
         self,
         exp_root: Path,
+        use_shap: bool = True,
     ):
         self.exp_root = exp_root
-        self.oof_data = {}
-        for target_dir in self.exp_root.iterdir():
-            if target_dir.is_file():
-                continue
-            seed_comp_path = target_dir / 'seed_comparison.json'
-            if not seed_comp_path.exists():
-                continue
-            target = target_dir.name
-            with seed_comp_path.open() as f:
-                seed_comp = json.load(f)
-                self.oof_data[target] = (
-                    seed_comp['best_model_type'],
-                    OOFMetrics.from_json(seed_comp['best_metrics']),
-                )
+        self.explorer = Explorer(exp_root)
+        self.targets = self.explorer.get_targets_list()
+
+        if use_shap:
+            self._init_shap_values()
+
+    def _init_shap_values(self):
+        self.shap_values = {}
+        self.features = {}
+        for target in self.targets:
+            pipeline = joblib.load(self.explorer.get_best_model_path(target))
+            preprocessor = pipeline.named_steps['prep']
+            model = pipeline.named_steps['model'].regressor_
+            model_type = self.explorer.get_best_model_type(target)
+            features = self.explorer.get_features(target)
+            features_transformed = preprocessor.transform(features)
+            self.features[target] = features_transformed
+            match model_type:
+                case 'xgb':
+                    explainer = shap.Explainer(model.predict, features_transformed)
+                    self.shap_values[target] = explainer(features_transformed)
+                case 'rf':
+                    explainer = shap.TreeExplainer(model)
+                    self.shap_values[target] = explainer.shap_values(features_transformed)
+                case 'linear':
+                    explainer = shap.LinearExplainer(model, features_transformed)
+                    self.shap_values[target] = explainer.shap_values(features_transformed)
 
     def plot_cv_metrics(
         self,
@@ -45,7 +62,12 @@ class Visualizer:
             metrics_used: 展示的指标列表
         """
         if data is None:
-            data = copy.deepcopy(self.oof_data)
+            data = {}
+            for target in self.targets:
+                data[target] = (
+                    self.explorer.get_best_model_type(target),
+                    self.explorer.get_oof_metrics(target),
+                )
         output_path = (
             self.exp_root / f'metrics_bar_chart{"_" + output_suffix if output_suffix else ""}.png'
         )
@@ -70,7 +92,7 @@ class Visualizer:
         fig, axes = plt.subplots(*figshape, figsize=figsize)
         for i, metrics in enumerate(metrics_used):
             if figshape[0] > 1:
-                ax = axes[i // figshape[0]][i % figshape[0]]
+                ax = axes[i // figshape[1]][i % figshape[1]]
             else:
                 ax = axes[i]
             bar = ax.barh(y_pos, df_mean[metrics], alpha=0.7, edgecolor='black')
@@ -139,7 +161,12 @@ class Visualizer:
         plot measured vs predicted plots.
         """
         if data is None:
-            data = copy.deepcopy(self.oof_data)
+            data = {}
+            for target in self.targets:
+                data[target] = (
+                    self.explorer.get_best_model_type(target),
+                    self.explorer.get_oof_metrics(target),
+                )
         output_path = (
             self.exp_root
             / f'measured_vs_predicted{"_" + output_suffix if output_suffix else ""}.png'
@@ -168,7 +195,7 @@ class Visualizer:
         is_first = True
         for i, (target, (_, oof_metrics)) in enumerate(data.items()):
             if figshape[0] > 1:
-                ax = axes[i // figshape[0]][i % figshape[0]]
+                ax = axes[i // figshape[1]][i % figshape[1]]
             else:
                 ax = axes[i]
             predictions = oof_metrics.oof_predictions
@@ -215,19 +242,74 @@ class Visualizer:
 
     def plot_shap_summary(
         self,
+        shap_values=None,
+        data=None,
+        targets_used=None,
         output_suffix: str | None = None,
     ):
+        if shap_values is None:
+            shap_values = self.shap_values.copy()
         output_path = (
             self.exp_root / f'shap_summary{"_" + output_suffix if output_suffix else ""}.png'
         )
 
+        total_plots = len(shap_values)
+        figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
+        fig, axes = plt.subplots(*figshape, figsize=figsize)
+
+        for i, (target, sp_values) in enumerate(shap_values.items()):
+            if figshape[0] > 1:
+                ax = axes[i // figshape[1]][i % figshape[1]]
+            else:
+                ax = axes[i]
+            plt.sca(ax)
+            features = self.features[target]
+            shap.summary_plot(sp_values, features, plot_type='dot', show=False)
+            ax.set_title(f'{target}', fontsize=13, fontweight='bold')
+        plt.suptitle(
+            'SHAP Dot Summary Plot',
+            fontsize=15,
+            fontweight='bold',
+            y=0.98,
+        )
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+
     def plot_shap_importance(
         self,
+        shap_values=None,
+        data=None,
         output_suffix: str | None = None,
     ):
+        if shap_values is None:
+            shap_values = self.shap_values.copy()
         output_path = (
             self.exp_root / f'shap_importance{"_" + output_suffix if output_suffix else ""}.png'
         )
+
+        total_plots = len(shap_values)
+        figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
+        fig, axes = plt.subplots(*figshape, figsize=figsize)
+
+        for i, (target, sp_values) in enumerate(shap_values.items()):
+            if figshape[0] > 1:
+                ax = axes[i // figshape[1]][i % figshape[1]]
+            else:
+                ax = axes[i]
+            plt.sca(ax)
+            features = self.features[target]
+            shap.summary_plot(sp_values, features, plot_type='bar', show=False)
+            ax.set_title(f'{target}', fontsize=13, fontweight='bold')
+        plt.suptitle(
+            'SHAP Importance Plot',
+            fontsize=15,
+            fontweight='bold',
+            y=0.98,
+        )
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
     def plot_shap_interaction(
         self,

@@ -273,13 +273,14 @@ def get_feature_groups() -> FeatureGroups:
 
 
 class MergedTabularDataset:
+    feature_groups = get_feature_groups()
+
     def __init__(self, data_path: Path | None = None):
         if data_path is None:
             data_path = Path(__file__).parents[2] / 'datasets/merged_data.csv'
         assert data_path.exists(), f'data path {data_path} doesnot exists.'
         self.df = pd.read_csv(data_path, index_col='ID')
         self.groups = self._create_groups()
-        self.feature_groups = get_feature_groups()
         self._validate_features()
         self._apply_one_hot_encoding()
 
@@ -331,6 +332,22 @@ class MergedTabularDataset:
         X = self.df[feature_cols]
 
         return X, y_dict, self.groups
+
+    @staticmethod
+    def prepare_features(df: pd.DataFrame):
+        numeric_features = (
+            MergedTabularDataset.feature_groups.group1_natural
+            + MergedTabularDataset.feature_groups.group2_agro
+            + MergedTabularDataset.feature_groups.group3_socio
+        )
+        categorical_features_prefix = MergedTabularDataset.feature_groups.categorical
+        feature_columns = [
+            col
+            for col in df.columns
+            if col in numeric_features
+            or any(col.startswith(prefix) for prefix in categorical_features_prefix)
+        ]
+        return df[feature_columns]
 
     def _validate_features(self):
         assert isinstance(self.feature_groups, FeatureGroups)
