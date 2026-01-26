@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 from nni_pred.data import MergedTabularDataset
-from nni_pred.transformers import GroupedPCA, TargetTransformer, get_feature_engineering
+from nni_pred.transformers import GroupedPCA, TargetTransformer, get_preprocessing_pipeline
 from nni_pred.evaluation import Metrics, Evaluator
 from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
@@ -58,16 +58,7 @@ def main():
             test_y = y.iloc[test_idx]
             train_groups = groups[train_val_idx]
 
-            feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
-            model = TransformedTargetRegressor(
-                builder.get_regressor(), transformer=TargetTransformer(1)
-            )
-            pipeline = Pipeline(
-                [
-                    ('prep', feature_engineering),
-                    ('model', model),
-                ]
-            )
+            pipeline = builder.get_regressor(random_state=args.seed)
 
             inner_cv = GroupKFold(4, shuffle=True, random_state=args.seed)
             grid_search_cv = GridSearchCV(
@@ -97,16 +88,7 @@ def main():
 
         # Step 2: Final model training
         logger.info(f'Training {model_name} ({target}) on all data...')
-        feature_engineering = get_feature_engineering(args.model_type, random_state=args.seed)
-        model = TransformedTargetRegressor(
-            builder.get_regressor(), transformer=TargetTransformer(1)
-        )
-        pipeline = Pipeline(
-            [
-                ('prep', feature_engineering),
-                ('model', model),
-            ]
-        )
+        pipeline = builder.get_regressor(random_state=args.seed)
         final_cv = GroupKFold(5, shuffle=True, random_state=args.seed)
         final_grid_search = GridSearchCV(
             pipeline, param_grid_pipeline, scoring=custom_scoring, cv=final_cv

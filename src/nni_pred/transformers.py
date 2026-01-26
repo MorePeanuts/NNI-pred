@@ -3,6 +3,7 @@ Pipeline for data feature engineering.
 """
 
 import warnings
+import sklearn
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -10,12 +11,13 @@ from typing import Literal
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder, OrdinalEncoder
 from sklearn.decomposition import PCA
-from .data import FeatureGroups, get_feature_groups
+from .data import VariableGroups
 
 
 warnings.filterwarnings('ignore')
+sklearn.set_config(transform_output='pandas')
 
 
 class TargetTransformer(BaseEstimator, TransformerMixin):
@@ -41,26 +43,22 @@ class TargetTransformer(BaseEstimator, TransformerMixin):
 class GroupedPCA(BaseEstimator, TransformerMixin):
     def __init__(
         self,
-        feature_groups: FeatureGroups | None = None,
         variance_threshold: float = 0.95,
         random_state: int = 42,
     ):
-        self.feature_groups = feature_groups or get_feature_groups()
         self.variance_threshold = variance_threshold
         self.random_state = random_state
 
     def fit(self, X: pd.DataFrame, y=None):
-        assert isinstance(self.feature_groups, FeatureGroups)
-
-        # Group2: Scale + PCA
-        group2_cols = self.feature_groups.group2_agro
+        # Group agro: Scale + PCA
+        group2_cols = VariableGroups.group_agro
         self.group2_scaler_ = StandardScaler()
         X_group2 = self.group2_scaler_.fit_transform(X[group2_cols])
         self.group2_pca_ = PCA(n_components=self.variance_threshold, random_state=self.random_state)
         self.group2_pca_.fit(X_group2)
 
-        # Group3: Scale + PCA
-        group3_cols = self.feature_groups.group3_socio
+        # Group socio: Scale + PCA
+        group3_cols = VariableGroups.group_socio
         self.group3_scaler_ = StandardScaler()
         X_group3 = self.group3_scaler_.fit_transform(X[group3_cols])
         self.group3_pca_ = PCA(n_components=self.variance_threshold, random_state=self.random_state)
@@ -69,40 +67,41 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        assert isinstance(self.feature_groups, FeatureGroups)
-
-        # Group2: Scale + PCA
-        group2_cols = self.feature_groups.group2_agro
+        # Group agro: Scale + PCA
+        group2_cols = VariableGroups.group_agro
         X_group2 = self.group2_scaler_.transform(X[group2_cols])
         X_group2 = self.group2_pca_.transform(X_group2)
-        n_comp2 = X_group2.shape[1]
-        X_group2_df = pd.DataFrame(
-            X_group2,
-            columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
-            index=X.index,
-        )
+        # n_comp2 = X_group2.shape[1]
+        # X_group2_df = pd.DataFrame(
+        #     X_group2,
+        #     columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
+        #     index=X.index,
+        # )
 
-        # Group3: Scale + PCA
-        group3_cols = self.feature_groups.group3_socio
+        # Group socio: Scale + PCA
+        group3_cols = VariableGroups.group_socio
         X_group3 = self.group3_scaler_.transform(X[group3_cols])
         X_group3 = self.group3_pca_.transform(X_group3)
-        n_comp3 = X_group3.shape[1]
-        X_group3_df = pd.DataFrame(
-            X_group3,
-            columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
-            index=X.index,
-        )
+        # n_comp3 = X_group3.shape[1]
+        # X_group3_df = pd.DataFrame(
+        #     X_group3,
+        #     columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
+        #     index=X.index,
+        # )
+        X_combined = np.hstack([X_group2, X_group3])
+        cols = [f'PC_Agro_{i + 1}' for i in range(X_group2.shape[1])] + [
+            f'PC_Socio_{i + 1}' for i in range(X_group3.shape[1])
+        ]
 
-        return pd.concat([X_group2_df, X_group3_df], axis=1)
+        return pd.DataFrame(X_combined, columns=cols, index=X.index)  # type: ignore
 
     def get_feature_cols(self):
-        assert isinstance(self.feature_groups, FeatureGroups)
-        return self.feature_groups.group2_agro + self.feature_groups.group3_socio
+        return VariableGroups.group_agro + VariableGroups.group_socio
 
     def get_feature_names_out(self, input_features=None):
         return np.array(
-            [f'agro_comp_{i}' for i in range(self.group2_pca_.n_components_)]
-            + [f'socio_comp_{i}' for i in range(self.group3_pca_.n_components_)]
+            [f'PC_Agro_{i}' for i in range(self.group2_pca_.n_components_)]
+            + [f'PC_Socio_{i}' for i in range(self.group3_pca_.n_components_)]
         )
 
     def get_pca_summary(self):
@@ -122,22 +121,20 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
 
 
 class SkewnessTransformer(BaseEstimator, TransformerMixin):
-    def __init__(
-        self, feature_groups: FeatureGroups | None = None, skewness_threshold: float = 0.75
-    ):
-        self.feature_groups = feature_groups or get_feature_groups()
+    def __init__(self, skewness_threshold: float = 0.75):
         self.skewness_threshold = skewness_threshold
 
     def fit(self, X: pd.DataFrame, y=None):
-        assert isinstance(self.feature_groups, FeatureGroups)
-
-        categorical_prefixes = self.feature_groups.categorical
-        categorical_cols = [
+        self.continuous_cols = [
             col
             for col in X.columns
-            if any(col.startswith(prefix) for prefix in categorical_prefixes)
+            if col
+            in VariableGroups.group_agro
+            + VariableGroups.group_natural
+            + VariableGroups.group_socio
+            + VariableGroups.soil_metabolites
+            + VariableGroups.soil_parent
         ]
-        self.continuous_cols = [col for col in X.columns if col not in categorical_cols]
 
         # Calculate skewness on training data
         self.skewness_dict_ = {}
@@ -177,28 +174,79 @@ class SkewnessTransformer(BaseEstimator, TransformerMixin):
         return X_transformed
 
 
-def get_feature_engineering(
-    model_type: Literal['linear', 'rf', 'xgb'], random_state: int = 42
+def get_preprocessing_pipeline(
+    model_type: Literal['linear', 'rf', 'xgb'],
+    # WARNING: Whether to use target to control input features
+    target: str | None = None,
+    random_state: int = 42,
 ) -> Pipeline:
-    feature_groups = get_feature_groups()
+    features = (
+        VariableGroups.categorical
+        + VariableGroups.soil_parent
+        + VariableGroups.soil_metabolites
+        + VariableGroups.group_natural
+        + VariableGroups.group_agro
+        + VariableGroups.group_socio
+    )
     match model_type:
         case 'rf' | 'xgb':
             pca = GroupedPCA(random_state=random_state)
-            column_transformer = ColumnTransformer(
-                transformers=[('pca', pca, pca.get_feature_cols())], remainder='passthrough'
+            keeper = ColumnTransformer(
+                transformers=[
+                    ('keep', 'passthrough', features),
+                ],
+                remainder='drop',
+                verbose_feature_names_out=False,
             )
-            return Pipeline([('column_transformer', column_transformer)])
+            column_transformer = ColumnTransformer(
+                transformers=[
+                    ('encoder', OrdinalEncoder(), VariableGroups.categorical),
+                    ('pca', pca, pca.get_feature_cols()),
+                ],
+                remainder='passthrough',
+            )
+            return Pipeline([('keeper', keeper), ('column_transformer', column_transformer)])
         case 'linear':
+            keeper = ColumnTransformer(
+                transformers=[
+                    ('keep', 'passthrough', features),
+                ],
+                remainder='drop',
+                verbose_feature_names_out=False,
+            )
+            encoder = ColumnTransformer(
+                transformers=[
+                    (
+                        'encoder',
+                        OneHotEncoder(handle_unknown='ignore', sparse_output=False, drop='first'),
+                        VariableGroups.categorical,
+                    )
+                ],
+                remainder='passthrough',
+                verbose_feature_names_out=False,
+            )
             skew_shift = SkewnessTransformer()
-            group1_scaler = StandardScaler()
+            group_natural_scaler = StandardScaler()
             pca = GroupedPCA(random_state=random_state)
             column_transformer = ColumnTransformer(
                 transformers=[
                     ('pca', pca, pca.get_feature_cols()),
-                    ('group1_scaler', group1_scaler, feature_groups.group1_natural),
+                    (
+                        'group_natural_scaler',
+                        group_natural_scaler,
+                        VariableGroups.group_natural
+                        + VariableGroups.soil_parent
+                        + VariableGroups.soil_metabolites,
+                    ),
                 ],
                 remainder='passthrough',
+                verbose_feature_names_out=False,
             )
             return Pipeline(
-                [('skew_shift', skew_shift), ('column_transformer', column_transformer)]
+                [
+                    ('keeper', keeper),
+                    ('encoder', encoder),
+                    ('skew_shift', skew_shift),
+                    ('column_transformer', column_transformer),
+                ]
             )

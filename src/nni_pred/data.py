@@ -54,6 +54,96 @@ SOIL_ANNUAL_VARS = [
 SOIL_CATEGORICAL_VARS = ['landuse']
 
 
+class VariableGroups:
+    metadata = [
+        'ID',  # Sample ID
+        'Lon',  # Longitude
+        'Lat',  # Latitude
+    ]
+    categorical = [
+        'Season',  # Season (Dry, Normal, Rainy)
+        'Landuse',  # Land use type at water body location
+        # 'Soil_landuse',  # Land use type of nearest soil sample
+    ]
+    targets_parent = [
+        'THIA',  # Thiamethoxam
+        'IMI',  # Imidacloprid
+        'CLO',  # Clothianidin
+        'ACE',  # Acetamiprid
+        'DIN',  # Dinotefuran
+        'parentNNIs',  # Sum of parent neonicotinoids
+    ]
+    targets_metabolites = [
+        'IMI-UREA',  # Imidacloprid-urea
+        'DN-IMI',  # Desmethyl-imidacloprid
+        'DM-ACE',  # Desmethyl-acetamiprid
+        'CLO-UREA',  # Clothianidin-urea
+        'mNNIs',  # Sum of metabolites
+    ]
+    soil_parent = [
+        'Soil_THIA_agg',
+        'Soil_IMI_agg',
+        'Soil_CLO_agg',
+        'Soil_parentNNIs_agg',
+    ]
+    soil_metabolites = [
+        'Soil_IMI-UREA_agg',
+        'Soil_DN-IMI_agg',
+        'Soil_CLO-UREA_agg',
+        'Soil_mNNIs_agg',
+    ]
+    group_natural = [
+        'PREC',  # Water body precipitation
+        'T_M',  # Air temperature
+        'T_W',  # Water temperature
+        'DO',  # Dissolved oxygen
+        'pH',  # pH
+        'COND',  # Conductivity
+        'DOC',  # Dissolved organic carbon
+        # WARNING: Whether to use altitude as a feature
+        # 'Alt',  # Altitude (water body)
+    ]
+    group_agro = [
+        'FER',  # Fertilizer usage (water body location)
+        'FERPER',  # Fertilizer per unit area
+        'PES',  # Pesticide usage
+        'PESPER',  # Pesticide per unit area
+        'AMP',  # Agricultural machinery power
+        'TSA',  # Total sown area
+        'FCA',  # Food crop area
+        'WA',  # Wheat area
+        'CA',  # Corn area
+        'VEGA',  # Vegetable area
+        'ARCA',  # Additional crop area
+        'CROPOUT',  # Grain crop output
+        'WO',  # Wheat output
+        'CO',  # Corn output
+        'VO',  # Vegetable output
+        'FOP',  # Fruit output
+        'AGR_W',  # Agricultural water usage
+        'IRR_W',  # Irrigation water usage
+    ]
+    group_socio = [
+        'GDP',  # Gross Domestic Product
+        'OP_FI',  # First industry output
+        'OP_SE',  # Second industry output
+        'OP_TH',  # Third industry output
+        'AO',  # Agricultural output
+        'FO',  # Forestry output
+        'Urban',  # Urbanization rate
+        'POP_TOT',  # Total population
+        'PR',  # Primary industry ratio
+        'SR',  # Secondary industry ratio
+        'TR',  # Tertiary industry ratio
+        'UI',  # Urban resident income
+        'RI',  # Rural resident income
+        'UR_W',  # Urban residential water usage
+        'RU_W',  # Rural residential water usage
+        'IND_W',  # Industrial water usage
+        'LIF_W',  # Total residential water usage
+    ]
+
+
 @dataclass
 class FeatureGroups:
     group1_natural: list[str]
@@ -273,8 +363,6 @@ def get_feature_groups() -> FeatureGroups:
 
 
 class MergedTabularDataset:
-    feature_groups = get_feature_groups()
-
     def __init__(self, data_path: Path | None = None):
         if data_path is None:
             data_path = Path(__file__).parents[2] / 'datasets/merged_data.csv'
@@ -282,7 +370,6 @@ class MergedTabularDataset:
         self.df = pd.read_csv(data_path, index_col='ID')
         self.groups = self._create_groups()
         self._validate_features()
-        self._apply_one_hot_encoding()
 
     def _create_groups(self, lon_col: str = 'Lon', lat_col: str = 'Lat'):
         """
@@ -319,12 +406,11 @@ class MergedTabularDataset:
             Tuple of (X, y_dict, groups)
         """
         # Extract targets
-        assert isinstance(self.feature_groups, FeatureGroups)
-        target_cols = self.feature_groups.targets
+        target_cols = VariableGroups.targets_parent + VariableGroups.targets_metabolites
         y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
 
         # Extract metadata columns
-        metadata_cols = self.feature_groups.metadata
+        metadata_cols = VariableGroups.metadata
 
         # Features = all columns except targets and metadata
         exclude_cols = list(y_dict.keys()) + metadata_cols
@@ -333,52 +419,45 @@ class MergedTabularDataset:
 
         return X, y_dict, self.groups
 
-    @staticmethod
-    def prepare_features(df: pd.DataFrame):
-        numeric_features = (
-            MergedTabularDataset.feature_groups.group1_natural
-            + MergedTabularDataset.feature_groups.group2_agro
-            + MergedTabularDataset.feature_groups.group3_socio
-        )
-        categorical_features_prefix = MergedTabularDataset.feature_groups.categorical
-        feature_columns = [
-            col
-            for col in df.columns
-            if col in numeric_features
-            or any(col.startswith(prefix) for prefix in categorical_features_prefix)
-        ]
-        return df[feature_columns]
+    # @staticmethod
+    # def prepare_features(df: pd.DataFrame):
+    #     numeric_features = (
+    #         MergedTabularDataset.feature_groups.group1_natural
+    #         + MergedTabularDataset.feature_groups.group2_agro
+    #         + MergedTabularDataset.feature_groups.group3_socio
+    #     )
+    #     categorical_features_prefix = MergedTabularDataset.feature_groups.categorical
+    #     feature_columns = [
+    #         col
+    #         for col in df.columns
+    #         if col in numeric_features
+    #         or any(col.startswith(prefix) for prefix in categorical_features_prefix)
+    #     ]
+    #     return df[feature_columns]
 
     def _validate_features(self):
-        assert isinstance(self.feature_groups, FeatureGroups)
         assert isinstance(self.df, pd.DataFrame)
 
-        for col in self.feature_groups.group1_natural:
+        for col in VariableGroups.categorical:
             assert col in self.df.columns
 
-        for col in self.feature_groups.group2_agro:
+        for col in VariableGroups.targets_parent:
             assert col in self.df.columns
 
-        for col in self.feature_groups.group3_socio:
+        for col in VariableGroups.targets_metabolites:
             assert col in self.df.columns
 
-        for col in self.feature_groups.targets:
+        for col in VariableGroups.soil_parent:
             assert col in self.df.columns
 
-        for col in self.feature_groups.metadata:
-            assert col in self.df.columns or col == self.df.index.name
+        for col in VariableGroups.soil_metabolites:
+            assert col in self.df.columns
 
-        for col in self.feature_groups.categorical:
-            assert self.df.columns.str.startswith(col).any()
+        for col in VariableGroups.group_natural:
+            assert col in self.df.columns
 
-    def _apply_one_hot_encoding(self):
-        """
-        Apply one-hot encoding to categorical variables.
-        """
-        assert isinstance(self.feature_groups, FeatureGroups)
-        categorical_vars = self.feature_groups.categorical
+        for col in VariableGroups.group_agro:
+            assert col in self.df.columns
 
-        for col in categorical_vars:
-            dummies = pd.get_dummies(self.df[col], prefix=col, drop_first=False, dtype=float)
-            self.df = self.df.drop(columns=[col])
-            self.df = pd.concat([self.df, dummies], axis=1)
+        for col in VariableGroups.group_socio:
+            assert col in self.df.columns

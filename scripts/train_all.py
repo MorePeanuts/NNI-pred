@@ -10,14 +10,13 @@ from pathlib import Path
 from datetime import datetime
 from loguru import logger
 from nni_pred.trainer import Trainer, SeedSelector
-from nni_pred.data import get_feature_groups
+from nni_pred.data import VariableGroups
 
 
 def main():
     logger.remove()
 
-    feature_groups = get_feature_groups()
-    targets = feature_groups.targets
+    targets = VariableGroups.targets_parent + VariableGroups.targets_metabolites
     trainer = Trainer(output_path=output_path, param_size=args.size, n_jobs=args.n_jobs)
     seed_selector = SeedSelector(trainer, max_attempts=args.max_attempts, seed=args.init_seed)
 

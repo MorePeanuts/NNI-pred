@@ -13,7 +13,7 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNet
 from dataclasses import dataclass
-from .transformers import get_feature_engineering, TargetTransformer
+from .transformers import get_preprocessing_pipeline, TargetTransformer
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
@@ -48,10 +48,10 @@ class ElasticNetBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
         regressor = TransformedTargetRegressor(
             ElasticNet(random_state=random_state),
-            transformer=TargetTransformer(1),
+            transformer=TargetTransformer(0),
         )
         pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
         return pipeline
@@ -96,10 +96,10 @@ class RandomForestBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
         regressor = TransformedTargetRegressor(
             RandomForestRegressor(random_state=random_state, n_jobs=self.n_jobs),
-            transformer=TargetTransformer(1),
+            transformer=TargetTransformer(0),
             # TODO: try identical transformer:
             # transformer=FunctionTransformer(),
         )
@@ -157,12 +157,14 @@ class XGBoostBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_feature_engineering(self.model_type, random_state)
+        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
         regressor = TransformedTargetRegressor(
             XGBRegressor(
-                objective=self.objective, tree_method=self.tree_method, random_state=random_state
+                # objective=self.objective,
+                tree_method=self.tree_method,
+                random_state=random_state,
             ),
-            transformer=TargetTransformer(1),
+            transformer=TargetTransformer(0),
             # TODO: try identical transformer:
             # transformer=FunctionTransformer(),
         )
