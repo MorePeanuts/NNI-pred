@@ -164,7 +164,7 @@ class Visualizer:
                     data.pop(target)
 
         if use_log:
-            trans = TargetTransformer(1)
+            trans = TargetTransformer(0)
             for target, (_, oof_metrics) in data.items():
                 predictions = oof_metrics.oof_predictions
                 predictions[f'log_{target}'] = trans.transform(predictions[target])

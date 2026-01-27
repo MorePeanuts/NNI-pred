@@ -9,7 +9,7 @@ from nni_pred.evaluation import Comparator, OOFMetrics
 
 
 def main():
-    comparator = Comparator(cv_threshold=args.cv_threshold)
+    comparator = Comparator(indicator=args.indicator, cv_threshold=args.cv_threshold)
     rows = []
 
     for target_dir in exp_path.iterdir():
@@ -29,6 +29,9 @@ def main():
         comparator.compare_seed(target_dir)
 
         target = target_dir.name
+        if not (target_dir / 'seed_comparison.json').exists():
+            logger.warning(f'No best seed found in {target_dir}')
+            continue
         with (target_dir / 'seed_comparison.json').open() as f:
             s = json.load(f)
             best_metrics = OOFMetrics.from_json(s['best_metrics'])
@@ -36,18 +39,23 @@ def main():
             row.update(best_metrics.to_format_dict())
             rows.append(row)
 
-    metrics_summary = pd.DataFrame(rows)
-    metrics_summary = metrics_summary.set_index('target')
-    logger.info(f'Summary all targets.\n{metrics_summary}')
-    summary_path = exp_path / 'metrics_summary.csv'
-    metrics_summary.to_csv(summary_path, index=True)
+    (exp_path / 'metrics_summary.csv').unlink(missing_ok=True)
+    if len(rows) > 0:
+        metrics_summary = pd.DataFrame(rows)
+        metrics_summary = metrics_summary.set_index('target')
+        logger.info(f'Summary all targets.\n{Comparator.format_summary_table(metrics_summary)}')
+        summary_path = exp_path / 'metrics_summary.csv'
+        metrics_summary.to_csv(summary_path, index=True)
+    else:
+        logger.warning(f'All targets failed to find best seed in {exp_path}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('exp_path', type=str)
-    parser.add_argument('--cv-threshold', default=0.5, type=float)
+    parser.add_argument('--cv-threshold', default=0.8, type=float)
     parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--indicator', default='NSE_log', type=str)
     args = parser.parse_args()
     exp_path = Path(args.exp_path)
     assert exp_path.exists(), f'{exp_path} doesnot exist.'

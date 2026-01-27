@@ -48,11 +48,17 @@ class Metrics:
     """
 
     NSE_log: float
+    NSE_log_detected: float
     RSR_log: float
+    RSR_log_detected: float
     NSE: float
+    NSE_detected: float
     RSR: float
+    RSR_detected: float
     PBIAS: float
+    PBIAS_detected: float
     KGE: float
+    KGE_detected: float
     FNR: float  # false negative rate
     FPR: float  # false positive rate
     TNR: float  # true negative rate
@@ -63,17 +69,24 @@ class Metrics:
         cls, y_true: np.ndarray, y_pred: np.ndarray, offset: float, threshold: float
     ):
         conf = cls.calc_confusion_matrix(y_true, y_pred, threshold)
+        mask = conf['true']
         y_true_log = np.log(y_true + offset)
         y_pred_log = np.log(y_pred + offset)
         assert not np.isnan(y_true_log).any(), f'offset={offset}\ny_true={y_true}'
         assert not np.isnan(y_pred_log).any(), f'offset={offset}\ny_pred={y_pred}'
         return cls(
             NSE_log=cls.calc_nse(y_true_log, y_pred_log),
+            NSE_log_detected=cls.calc_nse(y_true_log[mask], y_pred_log[mask]),
             RSR_log=cls.calc_rsr(y_true_log, y_pred_log),
+            RSR_log_detected=cls.calc_rsr(y_true_log[mask], y_pred_log[mask]),
             NSE=cls.calc_nse(y_true, y_pred),
+            NSE_detected=cls.calc_nse(y_true[mask], y_pred[mask]),
             RSR=cls.calc_rsr(y_true, y_pred),
+            RSR_detected=cls.calc_rsr(y_true[mask], y_pred[mask]),
             PBIAS=cls.calc_pbias(y_true, y_pred),
+            PBIAS_detected=cls.calc_pbias(y_true[mask], y_pred[mask]),
             KGE=cls.calc_kge(y_true, y_pred),
+            KGE_detected=cls.calc_kge(y_true[mask], y_pred[mask]),
             FNR=conf['FN'] / y_pred.size,
             FPR=conf['FP'] / y_pred.size,
             TNR=conf['TN'] / y_pred.size,
@@ -83,11 +96,17 @@ class Metrics:
     def to_format_dict(self):
         return {
             'NSE (log)': f'{self.NSE_log:.4f}',
+            'NSE (log, detected)': f'{self.NSE_log_detected:.4f}',
             'RSR (log)': f'{self.RSR_log:.4f}',
+            'RSR (log, detected)': f'{self.RSR_log_detected:.4f}',
             'NSE': f'{self.NSE:.4f}',
+            'NSE (detected)': f'{self.NSE_detected:.4f}',
             'RSR': f'{self.RSR:.4f}',
+            'RSR (detected)': f'{self.RSR_detected:.4f}',
             'PBIAS (%)': f'{self.PBIAS:.4f}',
+            'PBIAS (%, detected)': f'{self.PBIAS_detected:.4f}',
             'KGE': f'{self.KGE:.4f}',
+            'KGE (detected)': f'{self.KGE_detected:.4f}',
             'FNR': f'{self.FNR:.4f}',
             'FPR': f'{self.FPR:.4f}',
             'TNR': f'{self.TNR:.4f}',
@@ -97,22 +116,20 @@ class Metrics:
     @staticmethod
     def get_metrics_repr(ind):
         match ind:
-            case 'NSE_log':
+            case 'NSE_log' | 'NSE_log_detected':
                 return 'NSE (log)'
-            case 'RSR_log':
+            case 'RSR_log' | 'RSR_log_detected':
                 return 'RSR (log)'
-            case 'NSE':
+            case 'NSE' | 'NSE_detected':
                 return 'NSE'
-            case 'RSR':
+            case 'RSR' | 'RSR_detected':
                 return 'RSR'
-            case 'PBIAS':
+            case 'PBIAS' | 'PBIAS_detected':
                 return 'PBIAS (%)'
-            case 'KGE':
+            case 'KGE' | 'KGE_detected':
                 return 'KGE'
-            case 'FNR':
-                return 'FNR'
-            case 'FPR':
-                return 'FPR'
+            case 'FNR' | 'FPR' | 'TNR' | 'TPR':
+                return ind
 
     @staticmethod
     def calc_confusion_matrix(y_true, y_pred, threshold):
@@ -126,7 +143,7 @@ class Metrics:
             'TN': np.sum(actual_neg & predict_neg),
             'FP': np.sum(actual_neg & predict_pos),
             'FN': np.sum(actual_pos & predict_neg),
-            'true': predict_pos,
+            'true': predict_pos & actual_pos,
         }
 
     @staticmethod
@@ -220,11 +237,17 @@ class OOFMetrics:
         target_col = fold_infos[0].target_col
         mean = Metrics(
             NSE_log=np.mean([info.metrics.NSE_log for info in fold_infos]),
+            NSE_log_detected=np.mean([info.metrics.NSE_log_detected for info in fold_infos]),
             RSR_log=np.mean([info.metrics.RSR_log for info in fold_infos]),
+            RSR_log_detected=np.mean([info.metrics.RSR_log_detected for info in fold_infos]),
             NSE=np.mean([info.metrics.NSE for info in fold_infos]),
+            NSE_detected=np.mean([info.metrics.NSE_detected for info in fold_infos]),
             RSR=np.mean([info.metrics.RSR for info in fold_infos]),
+            RSR_detected=np.mean([info.metrics.RSR_detected for info in fold_infos]),
             PBIAS=np.mean([info.metrics.PBIAS for info in fold_infos]),
+            PBIAS_detected=np.mean([info.metrics.PBIAS_detected for info in fold_infos]),
             KGE=np.mean([info.metrics.KGE for info in fold_infos]),
+            KGE_detected=np.mean([info.metrics.KGE_detected for info in fold_infos]),
             FNR=np.mean([info.metrics.FNR for info in fold_infos]),
             FPR=np.mean([info.metrics.FPR for info in fold_infos]),
             TNR=np.mean([info.metrics.TNR for info in fold_infos]),
@@ -232,11 +255,17 @@ class OOFMetrics:
         )
         std = Metrics(
             NSE_log=np.std([info.metrics.NSE_log for info in fold_infos]),
+            NSE_log_detected=np.std([info.metrics.NSE_log_detected for info in fold_infos]),
             RSR_log=np.std([info.metrics.RSR_log for info in fold_infos]),
+            RSR_log_detected=np.std([info.metrics.RSR_log_detected for info in fold_infos]),
             NSE=np.std([info.metrics.NSE for info in fold_infos]),
+            NSE_detected=np.std([info.metrics.NSE_detected for info in fold_infos]),
             RSR=np.std([info.metrics.RSR for info in fold_infos]),
+            RSR_detected=np.std([info.metrics.RSR_detected for info in fold_infos]),
             PBIAS=np.std([info.metrics.PBIAS for info in fold_infos]),
+            PBIAS_detected=np.std([info.metrics.PBIAS_detected for info in fold_infos]),
             KGE=np.std([info.metrics.KGE for info in fold_infos]),
+            KGE_detected=np.std([info.metrics.KGE_detected for info in fold_infos]),
             FNR=np.std([info.metrics.FNR for info in fold_infos]),
             FPR=np.std([info.metrics.FPR for info in fold_infos]),
             TNR=np.std([info.metrics.TNR for info in fold_infos]),
@@ -338,6 +367,7 @@ class Evaluator:
             df[self.target_col + '_pred'] = y_pred
             self.oof_predictions = pd.concat([self.oof_predictions, df])
 
+        # NOTE: Build Metrics 1
         metrics = Metrics.from_predictions(y_true, y_pred, offset, get_threshold(self.target_col))
         fold_info = FoldInformation(
             fold, best_param, metrics, best_inner_score, self.target_col, offset
@@ -345,6 +375,7 @@ class Evaluator:
         self.fold_infos.append(fold_info)
 
         if fold == self.k_fold:
+            # NOTE: Build Metrics 2
             self.oof_metrics = OOFMetrics.from_fold_information_list(
                 self.fold_infos, self.oof_predictions
             )
@@ -385,6 +416,8 @@ class Comparator:
         """
         Under the same seed experiment, select the one with the best metrics among different models.
         """
+        if (path / 'model_comparison.json').exists():
+            (path / 'model_comparison.json').unlink()
         indicator_map = {}
         metrics_map = {}
         cv_records = []
@@ -429,6 +462,8 @@ class Comparator:
         """
         Among different seeds, select the best seed based on the performance of the best model under each seed.
         """
+        if (path / 'seed_comparison.json').exists():
+            (path / 'seed_comparison.json').unlink()
         seed_indicator_map = {}
         for seed_dir in path.iterdir():
             if not seed_dir.is_dir():
@@ -468,3 +503,7 @@ class Comparator:
                 indent=4,
                 ensure_ascii=False,
             )
+
+    @staticmethod
+    def format_summary_table(df: pd.DataFrame) -> str:
+        return tabulate(df.T, headers='keys', tablefmt='fancy_grid', showindex=True)

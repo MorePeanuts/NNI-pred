@@ -179,12 +179,12 @@ class Trainer:
 
 
 class SeedSelector:
-    def __init__(self, trainer: Trainer, max_attempts=10, seed=42, cv_threshold=0.8):
+    def __init__(self, trainer: Trainer, comparator: Comparator, max_attempts=10, seed=42):
         self.trainer = trainer
         self.exp_root = self.trainer.output_path
         self.max_attempts = max_attempts
         self.seed = seed
-        self.comparator = Comparator(cv_threshold=cv_threshold)
+        self.comparator = comparator
         self.rng = random.Random(self.seed)
         self.seed_set = set()
 
@@ -244,8 +244,12 @@ class SeedSelector:
         if len(rows) > 0:
             metrics_summary = pd.DataFrame(rows)
             metrics_summary = metrics_summary.set_index('target')
-            logger.info(f'Summary all {total_targets} targets.\n{metrics_summary}')
+            logger.info(
+                f'Summary all {total_targets} targets.\n{Comparator.format_summary_table(metrics_summary)}'
+            )
             summary_path = self.exp_root / 'metrics_summary.csv'
             metrics_summary.to_csv(summary_path, index=True)
+        else:
+            logger.warning(f'All targets failed to find best seed in {self.exp_root}')
 
         pbar.close()

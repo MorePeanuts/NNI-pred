@@ -5,6 +5,8 @@ This script invokes the encapsulated trainer and seed selector for the formal ex
 The script does not include visualization steps.
 """
 
+from nni_pred.evaluation import Comparator
+
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -18,7 +20,10 @@ def main():
 
     targets = VariableGroups.targets_parent + VariableGroups.targets_metabolites
     trainer = Trainer(output_path=output_path, param_size=args.size, n_jobs=args.n_jobs)
-    seed_selector = SeedSelector(trainer, max_attempts=args.max_attempts, seed=args.init_seed)
+    comparator = Comparator(indicator=args.indicator, cv_threshold=args.cv_threshold)
+    seed_selector = SeedSelector(
+        trainer, comparator, max_attempts=args.max_attempts, seed=args.init_seed
+    )
 
     if 'all' in args.targets:
         seed_selector.run_exp(targets)
@@ -34,6 +39,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str)
     parser.add_argument('--size', default='medium', choices=['small', 'medium', 'large'])
     parser.add_argument('--n-jobs', default=-1, type=int)
+    parser.add_argument('--cv-threshold', default=0.8, type=float)
+    parser.add_argument('--indicator', default='NSE_log', type=str)
     args = parser.parse_args()
 
     if args.output:
