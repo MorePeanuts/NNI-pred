@@ -18,25 +18,25 @@ def get_threshold(target) -> float:
         case 'THIA':
             return 0.0206060966888198
         case 'IMI':
-            return 0.0403050865952664
+            return 0.0404050865952664
         case 'CLO':
-            return 0.0304055916420431
+            return 0.0305055916420431
         case 'ACE':
-            return 0.00424264069423857
+            return 0.00434264069423857
         case 'DIN':
-            return 0.0466690476366243
+            return 0.0467690476366243
         case 'parentNNIs':
-            return 0.253144228089568
+            return 0.253244228089568
         case 'IMI-UREA':
-            return 0.0282842712949238
+            return 0.0283842712949238
         case 'DN-IMI':
-            return 0.0325269119891624
+            return 0.0326269119891624
         case 'DM-ACE':
-            return 0.0424264069423857
+            return 0.0425264069423857
         case 'CLO-UREA':
-            return 0.0608111832840862
+            return 0.0609111832840862
         case 'mNNIs':
-            return 0.405879293082156
+            return 0.405979293082156
         case _:
             raise ValueError(f'Unknown target {target}')
 
