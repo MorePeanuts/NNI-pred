@@ -7,7 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from collections.abc import Iterable
-from nni_pred.data import get_feature_groups
 from nni_pred.evaluation import Metrics, OOFMetrics
 from nni_pred.transformers import TargetTransformer
 from nni_pred.utils import Explorer
@@ -31,24 +30,10 @@ class Visualizer:
         self.features = {}
         for target in self.targets:
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
-            preprocessor = pipeline.named_steps['prep']
-            model = pipeline.named_steps['model'].regressor_
-            model_type = self.explorer.get_best_model_type(target)
             features = self.explorer.get_features(target)
-            features_transformed = preprocessor.transform(features)
-            features_name = preprocessor.get_feature_names_out()
-            features_name = np.array([name.split('__')[1] for name in features_name])
-            self.features[target] = pd.DataFrame(features_transformed, columns=features_name)
-            match model_type:
-                case 'xgb':
-                    explainer = shap.Explainer(model.predict, features_transformed)
-                    self.shap_values[target] = explainer(features_transformed)
-                case 'rf':
-                    explainer = shap.TreeExplainer(model)
-                    self.shap_values[target] = explainer.shap_values(features_transformed)
-                case 'linear':
-                    explainer = shap.LinearExplainer(model, features_transformed)
-                    self.shap_values[target] = explainer.shap_values(features_transformed)
+            # BUG: SHAP analysis cannot handle string data types.
+            explainer = shap.Explainer(pipeline.predict, features)
+            self.shap_values[target] = explainer(features)
 
     def plot_cv_metrics(
         self,
@@ -199,14 +184,14 @@ class Visualizer:
             if figshape[0] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
             else:
-                ax = axes[i]
+                ax = axes
             predictions = oof_metrics.oof_predictions
             r2 = oof_metrics.oof.NSE_log
             y_true = predictions[f'log_{target}'] if use_log else predictions[target]
             y_pred = predictions[f'log_{target}_pred'] if use_log else predictions[f'{target}_pred']
 
             for season, color in season_colors.items():
-                preds = predictions[predictions[f'Season_{season}'] > 0]
+                preds = predictions[predictions['Season'] == season]
                 ax.scatter(
                     preds[f'log_{target}'] if use_log else preds[target],
                     preds[f'log_{target}_pred'] if use_log else preds[f'{target}_pred'],
@@ -270,7 +255,7 @@ class Visualizer:
             else:
                 ax = axes[i]
             plt.sca(ax)
-            features = self.features[target]
+            features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
@@ -311,8 +296,7 @@ class Visualizer:
             else:
                 ax = axes[i]
             plt.sca(ax)
-            features = self.features[target]
-            print(features.columns)
+            features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
@@ -325,37 +309,12 @@ class Visualizer:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
 
-    def plot_shap_interaction(
-        self,
-        output_suffix: str | None = None,
-    ):
-        output_path = (
-            self.exp_root / f'shap_interaction{"_" + output_suffix if output_suffix else ""}.png'
-        )
-
     def plot_shap_dependence(
         self,
         output_suffix: str | None = None,
     ):
         output_path = (
             self.exp_root / f'shap_dependence{"_" + output_suffix if output_suffix else ""}.png'
-        )
-
-    def plot_seasonal_shap_comparison(
-        self,
-        output_suffix: str | None = None,
-    ):
-        output_path = (
-            self.exp_root
-            / f'seasonal_shap_comparison{"_" + output_suffix if output_suffix else ""}.png'
-        )
-
-    def plot_subgroup_analysis(
-        self,
-        output_suffix: str | None = None,
-    ):
-        output_path = (
-            self.exp_root / f'subgroup_analysis{"_" + output_suffix if output_suffix else ""}.png'
         )
 
     def _create_subplots_shape_and_figsize(self, total_plots: int) -> tuple:

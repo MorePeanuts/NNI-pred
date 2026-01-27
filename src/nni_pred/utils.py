@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 from dataclasses import dataclass
 from nni_pred.evaluation import OOFMetrics
+from nni_pred.data import VariableGroups
 
 
 @dataclass
@@ -56,7 +57,15 @@ class Explorer:
                     best_model_path = Path(
                         path / f'seed_{best_seed}/{best_model_type}_model_for_{target}.joblib'
                     )
-                    features = MergedTabularDataset.prepare_features(oof_metrics.oof_predictions)
+                    features = (
+                        VariableGroups.categorical
+                        + VariableGroups.soil_parent
+                        + VariableGroups.soil_metabolites
+                        + VariableGroups.group_natural
+                        + VariableGroups.group_agro
+                        + VariableGroups.group_socio
+                    )
+                    features = oof_metrics.oof_predictions[features]
                     self.details[target] = Details(
                         best_seed,
                         best_model_type,
