@@ -55,14 +55,16 @@ class Metrics:
     KGE: float
     FNR: float  # false negative rate
     FPR: float  # false positive rate
+    TNR: float  # true negative rate
+    TPR: float  # true positive rate
 
     @classmethod
     def from_predictions(
         cls, y_true: np.ndarray, y_pred: np.ndarray, offset: float, threshold: float
     ):
         conf = cls.calc_confusion_matrix(y_true, y_pred, threshold)
-        y_true_log = np.log(y_true[conf['true']] + offset)
-        y_pred_log = np.log(y_pred[conf['true']] + offset)
+        y_true_log = np.log(y_true + offset)
+        y_pred_log = np.log(y_pred + offset)
         assert not np.isnan(y_true_log).any(), f'offset={offset}\ny_true={y_true}'
         assert not np.isnan(y_pred_log).any(), f'offset={offset}\ny_pred={y_pred}'
         return cls(
@@ -72,8 +74,10 @@ class Metrics:
             RSR=cls.calc_rsr(y_true, y_pred),
             PBIAS=cls.calc_pbias(y_true, y_pred),
             KGE=cls.calc_kge(y_true, y_pred),
-            FNR=conf['FN'] / np.sum(y_pred),
-            FPR=conf['FP'] / np.sum(y_pred),
+            FNR=conf['FN'] / y_pred.size,
+            FPR=conf['FP'] / y_pred.size,
+            TNR=conf['TN'] / y_pred.size,
+            TPR=conf['TP'] / y_pred.size,
         )
 
     def to_format_dict(self):
@@ -86,6 +90,8 @@ class Metrics:
             'KGE': f'{self.KGE:.4f}',
             'FNR': f'{self.FNR:.4f}',
             'FPR': f'{self.FPR:.4f}',
+            'TNR': f'{self.TNR:.4f}',
+            'TPR': f'{self.TPR:.4f}',
         }
 
     @staticmethod
@@ -120,7 +126,7 @@ class Metrics:
             'TN': np.sum(actual_neg & predict_neg),
             'FP': np.sum(actual_neg & predict_pos),
             'FN': np.sum(actual_pos & predict_neg),
-            'true': actual_pos & predict_pos,
+            'true': predict_pos,
         }
 
     @staticmethod
@@ -221,6 +227,8 @@ class OOFMetrics:
             KGE=np.mean([info.metrics.KGE for info in fold_infos]),
             FNR=np.mean([info.metrics.FNR for info in fold_infos]),
             FPR=np.mean([info.metrics.FPR for info in fold_infos]),
+            TNR=np.mean([info.metrics.TNR for info in fold_infos]),
+            TPR=np.mean([info.metrics.TPR for info in fold_infos]),
         )
         std = Metrics(
             NSE_log=np.std([info.metrics.NSE_log for info in fold_infos]),
@@ -231,6 +239,8 @@ class OOFMetrics:
             KGE=np.std([info.metrics.KGE for info in fold_infos]),
             FNR=np.std([info.metrics.FNR for info in fold_infos]),
             FPR=np.std([info.metrics.FPR for info in fold_infos]),
+            TNR=np.std([info.metrics.TNR for info in fold_infos]),
+            TPR=np.std([info.metrics.TPR for info in fold_infos]),
         )
         mean_offset = np.mean([info.offset for info in fold_infos])
         oof = Metrics.from_predictions(
@@ -367,7 +377,7 @@ class Comparator:
     Compare the effects of different models and different random seeds.
     """
 
-    def __init__(self, indicator='NSE_log', cv_threshold=0.5):
+    def __init__(self, indicator='NSE_log', cv_threshold=0.8):
         self.indicator = indicator
         self.cv_threshold = cv_threshold
 
@@ -388,12 +398,10 @@ class Comparator:
                 oof_metrics = json.load(f)
             oof_metrics = OOFMetrics.from_json(oof_metrics)
             try:
-                # WARNING: The value of the indicator may be negative, which could lead to distortion in
-                # the cv. However, since the maximum indicator will be selected later, this issue can be ignored?
                 cv = oof_metrics.calc_coefficient_of_variation(self.indicator)
                 cv_records.append(cv)
                 logger.trace(f'Coefficient of variation of {path} is {cv}')
-                if cv <= self.cv_threshold:
+                if cv <= self.cv_threshold and cv >= 0:
                     indicator_map[model_type] = getattr(oof_metrics.mean, self.indicator)
                     metrics_map[model_type] = oof_metrics
             except Exception:
