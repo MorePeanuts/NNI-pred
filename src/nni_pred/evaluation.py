@@ -13,6 +13,34 @@ from loguru import logger
 from pathlib import Path
 
 
+def get_threshold(target) -> float:
+    match target:
+        case 'THIA':
+            return 0.0206060966888198
+        case 'IMI':
+            return 0.0403050865952664
+        case 'CLO':
+            return 0.0304055916420431
+        case 'ACE':
+            return 0.00424264069423857
+        case 'DIN':
+            return 0.0466690476366243
+        case 'parentNNIs':
+            return 0.253144228089568
+        case 'IMI-UREA':
+            return 0.0282842712949238
+        case 'DN-IMI':
+            return 0.0325269119891624
+        case 'DM-ACE':
+            return 0.0424264069423857
+        case 'CLO-UREA':
+            return 0.0608111832840862
+        case 'mNNIs':
+            return 0.405879293082156
+        case _:
+            raise ValueError(f'Unknown target {target}')
+
+
 @dataclass
 class Metrics:
     """
@@ -25,15 +53,18 @@ class Metrics:
     RSR: float
     PBIAS: float
     KGE: float
+    FNR: float  # false negative rate
+    FPR: float  # false positive rate
 
     @classmethod
-    def from_predictions(cls, y_true: np.ndarray, y_pred: np.ndarray, offset: float):
-        y_true_log = np.log(y_true + offset)
-        y_pred_log = np.log(y_pred + offset)
+    def from_predictions(
+        cls, y_true: np.ndarray, y_pred: np.ndarray, offset: float, threshold: float
+    ):
+        conf = cls.calc_confusion_matrix(y_true, y_pred, threshold)
+        y_true_log = np.log(y_true[conf['true']] + offset)
+        y_pred_log = np.log(y_pred[conf['true']] + offset)
         assert not np.isnan(y_true_log).any(), f'offset={offset}\ny_true={y_true}'
         assert not np.isnan(y_pred_log).any(), f'offset={offset}\ny_pred={y_pred}'
-        # BUG:如果在TargetTransformer中使用训练的offset，可能在此处出现NaN的问题
-        # 目前暂时强制将offset设置为1，来避免NaN问题
         return cls(
             NSE_log=cls.calc_nse(y_true_log, y_pred_log),
             RSR_log=cls.calc_rsr(y_true_log, y_pred_log),
@@ -41,6 +72,8 @@ class Metrics:
             RSR=cls.calc_rsr(y_true, y_pred),
             PBIAS=cls.calc_pbias(y_true, y_pred),
             KGE=cls.calc_kge(y_true, y_pred),
+            FNR=conf['FN'] / np.sum(y_pred),
+            FPR=conf['FP'] / np.sum(y_pred),
         )
 
     def to_format_dict(self):
@@ -51,6 +84,8 @@ class Metrics:
             'RSR': f'{self.RSR:.4f}',
             'PBIAS (%)': f'{self.PBIAS:.4f}',
             'KGE': f'{self.KGE:.4f}',
+            'FNR': f'{self.FNR:.4f}',
+            'FPR': f'{self.FPR:.4f}',
         }
 
     @staticmethod
@@ -68,6 +103,25 @@ class Metrics:
                 return 'PBIAS (%)'
             case 'KGE':
                 return 'KGE'
+            case 'FNR':
+                return 'FNR'
+            case 'FPR':
+                return 'FPR'
+
+    @staticmethod
+    def calc_confusion_matrix(y_true, y_pred, threshold):
+        actual_pos = y_true > threshold
+        actual_neg = y_true <= threshold
+        predict_pos = y_pred > threshold
+        predict_neg = y_pred <= threshold
+
+        return {
+            'TP': np.sum(actual_pos & predict_pos),
+            'TN': np.sum(actual_neg & predict_neg),
+            'FP': np.sum(actual_neg & predict_pos),
+            'FN': np.sum(actual_pos & predict_neg),
+            'true': actual_pos & predict_pos,
+        }
 
     @staticmethod
     def calc_nse(y_true, y_pred):
@@ -165,6 +219,8 @@ class OOFMetrics:
             RSR=np.mean([info.metrics.RSR for info in fold_infos]),
             PBIAS=np.mean([info.metrics.PBIAS for info in fold_infos]),
             KGE=np.mean([info.metrics.KGE for info in fold_infos]),
+            FNR=np.mean([info.metrics.FNR for info in fold_infos]),
+            FPR=np.mean([info.metrics.FPR for info in fold_infos]),
         )
         std = Metrics(
             NSE_log=np.std([info.metrics.NSE_log for info in fold_infos]),
@@ -173,12 +229,15 @@ class OOFMetrics:
             RSR=np.std([info.metrics.RSR for info in fold_infos]),
             PBIAS=np.std([info.metrics.PBIAS for info in fold_infos]),
             KGE=np.std([info.metrics.KGE for info in fold_infos]),
+            FNR=np.std([info.metrics.FNR for info in fold_infos]),
+            FPR=np.std([info.metrics.FPR for info in fold_infos]),
         )
         mean_offset = np.mean([info.offset for info in fold_infos])
         oof = Metrics.from_predictions(
             oof_predictions[target_col].values,
             oof_predictions[target_col + '_pred'].values,
             mean_offset,
+            get_threshold(target_col),
         )
         return cls(
             mean=mean,
@@ -259,15 +318,17 @@ class Evaluator:
         y_true = y_true.values
         if not hasattr(self, 'oof_predictions'):
             self.oof_predictions = X.copy()
+            self.oof_predictions['fold'] = fold
             self.oof_predictions[self.target_col] = y_true
             self.oof_predictions[self.target_col + '_pred'] = y_pred
         else:
             df = X.copy()
+            df['fold'] = fold
             df[self.target_col] = y_true
             df[self.target_col + '_pred'] = y_pred
             self.oof_predictions = pd.concat([self.oof_predictions, df])
 
-        metrics = Metrics.from_predictions(y_true, y_pred, offset)
+        metrics = Metrics.from_predictions(y_true, y_pred, offset, get_threshold(self.target_col))
         fold_info = FoldInformation(
             fold, best_param, metrics, best_inner_score, self.target_col, offset
         )
@@ -289,23 +350,9 @@ class Evaluator:
             f'====Training completed - Model: {self.model_name}, Target: {self.target_col}===='
         )
         logger.trace(f'  OOF metrics:{self.oof_metrics}')
-
-        # self.oof_predictions: 全部测试集上的预测结果
-        # self.fold_infos: 外CV每一折在测试集上的信息，包括最优参数、指标等信息
-        # self.oof_metrics: 在全部测试集上的指标
-        self.oof_predictions.to_csv(path / f'oof_predictions_of_{self.model_type}.csv', index=True)
-        logger.info(
-            f'   The prediction results of OOF have been saved in table oof_predictions_of_{self.model_type}.csv'
-        )
-        # with (path / f'fold_infos_of_{self.model_type}.json').open('w') as f:
-        #     json.dump(
-        #         [asdict(fold_info) for fold_info in self.fold_infos],
-        #         f,
-        #         indent=4,
-        #         ensure_ascii=False,
-        #     )
+        # self.oof_predictions.to_csv(path / f'oof_predictions_of_{self.model_type}.csv', index=True)
         # logger.info(
-        #     f'   The relevant information for each fold has been saved in fold_infos_of_{self.model_type}.json'
+        #     f'   The prediction results of OOF have been saved in table oof_predictions_of_{self.model_type}.csv'
         # )
         with (path / f'oof_metrics_of_{self.model_type}.json').open('w') as f:
             oof_metrics = self.oof_metrics.to_json()
