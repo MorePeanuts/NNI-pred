@@ -100,8 +100,6 @@ class RandomForestBuilder:
         regressor = TransformedTargetRegressor(
             RandomForestRegressor(random_state=random_state, n_jobs=self.n_jobs),
             transformer=TargetTransformer(0),
-            # TODO: try identical transformer:
-            # transformer=FunctionTransformer(),
         )
         pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
         return pipeline
@@ -165,8 +163,6 @@ class XGBoostBuilder:
                 random_state=random_state,
             ),
             transformer=TargetTransformer(0),
-            # TODO: try identical transformer:
-            # transformer=FunctionTransformer(),
         )
         pipeline = Pipeline([('prep', feature_engineering), ('model', regressor)])
         return pipeline

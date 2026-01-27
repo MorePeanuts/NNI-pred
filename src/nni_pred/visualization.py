@@ -1,3 +1,4 @@
+from shap.maskers import Independent
 import shap
 import json
 import copy
@@ -28,12 +29,31 @@ class Visualizer:
     def _init_shap_values(self):
         self.shap_values = {}
         self.features = {}
-        for target in self.targets:
+        for target in self.targets.copy():
+            model_type = self.explorer.get_best_model_type(target)
+            if model_type == 'linear':
+                self.targets.remove(target)
+                continue
+
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
             features = self.explorer.get_features(target)
+            cat_cols = ['Season', 'Landuse']
+            mappings = {col: list(features[col].unique()) for col in cat_cols}
+            features_numeric = features.copy()
+            for col in cat_cols:
+                features_numeric[col] = features[col].map(lambda x: mappings[col].index(x))
+
             # BUG: SHAP analysis cannot handle string data types.
-            explainer = shap.Explainer(pipeline.predict, features)
-            self.shap_values[target] = explainer(features)
+            def model_predict(data):
+                df = pd.DataFrame(data, columns=features.columns)
+                for col in cat_cols:
+                    df[col] = df[col].apply(lambda x: mappings[col][int(round(float(x)))])
+                return pipeline.predict(df)
+
+            explainer = shap.Explainer(model_predict, features_numeric)
+            sh_val = explainer(features_numeric)
+            sh_val.data = features.values
+            self.shap_values[target] = sh_val
 
     def plot_cv_metrics(
         self,
@@ -253,7 +273,7 @@ class Visualizer:
             if figshape[0] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
             else:
-                ax = axes[i]
+                ax = axes
             plt.sca(ax)
             features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False)
@@ -294,7 +314,7 @@ class Visualizer:
             if figshape[0] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
             else:
-                ax = axes[i]
+                ax = axes
             plt.sca(ax)
             features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False)

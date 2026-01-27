@@ -17,21 +17,28 @@ def main(args):
     else:
         now = datetime.now().strftime('%y%m%d_%H%M%S')
         output_path = Path(__file__).parents[1] / f'output/inf_{random_state}_{now}'
-    output_path.mkdir(parents=True, exist_ok=True)
+    # output_path.mkdir(parents=True, exist_ok=True)
 
-    dataset = MergedTabularDataset()
-    X, y_dict, groups = dataset.prepare_data()
     targets = explorer.get_targets_list()
     for target in targets:
-        y = y_dict[target].values
-        model_path = explorer.get_best_model_path(target)
-        model = joblib.load(model_path)
-        y_pred = model.predict(X)
-        metrics = Metrics.from_predictions(y, y_pred, 1)
-        print(f'=============={target}==============')
-        print(metrics)
-        print('=====================================')
-        # TODO: save inference results.
+        features = explorer.get_features(target)
+        pipeline = joblib.load(explorer.get_best_model_path(target))
+        model = pipeline.named_steps['model'].regressor_
+        preprocessor = pipeline.named_steps['prep']
+        features_trans = preprocessor.transform(features)
+        features_names = preprocessor.get_feature_names_out()
+        features_names = [name.split('__')[1] for name in features_names]
+        print(type(features_trans))
+        print(features_names)
+        # y = y_dict[target].values
+        # model_path = explorer.get_best_model_path(target)
+        # model = joblib.load(model_path)
+        # y_pred = model.predict(X)
+        # metrics = Metrics.from_predictions(y, y_pred, 1)
+        # print(f'=============={target}==============')
+        # print(metrics)
+        # print('=====================================')
+        # # TODO: save inference results.
 
 
 if __name__ == '__main__':

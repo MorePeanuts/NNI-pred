@@ -23,9 +23,11 @@ from nni_pred.data import MergedTabularDataset
 
 def main():
     exp_path = Path(args.path)
-    visualizer = Visualizer(exp_path, use_shap=False)
+    visualizer = Visualizer(exp_path, use_shap=True)
     visualizer.plot_cv_metrics()
     visualizer.plot_scatter_identity(output_suffix='log', use_log=True)
+    visualizer.plot_shap_importance()
+    visualizer.plot_shap_summary()
 
 
 if __name__ == '__main__':
