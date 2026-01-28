@@ -37,13 +37,12 @@ class Visualizer:
 
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
             features = self.explorer.get_features(target)
-            cat_cols = ['Season', 'Landuse']
+            cat_cols = self.explorer.var_cls.categorical
             mappings = {col: list(features[col].unique()) for col in cat_cols}
             features_numeric = features.copy()
             for col in cat_cols:
                 features_numeric[col] = features[col].map(lambda x: mappings[col].index(x))
 
-            # BUG: SHAP analysis cannot handle string data types.
             def model_predict(data):
                 df = pd.DataFrame(data, columns=features.columns)
                 for col in cat_cols:

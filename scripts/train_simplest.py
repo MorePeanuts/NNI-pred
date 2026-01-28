@@ -13,7 +13,7 @@ import numpy as np
 from datetime import datetime
 from pathlib import Path
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
-from nni_pred.data import MergedTabularDataset
+from nni_pred.data import MergedTabularDataset, MergedVariableGroups
 from nni_pred.transformers import GroupedPCA, TargetTransformer, get_preprocessing_pipeline
 from nni_pred.evaluation import Metrics, Evaluator
 from sklearn.model_selection import GroupKFold, GridSearchCV
@@ -26,11 +26,11 @@ from loguru import logger
 def main():
     match args.model_type:
         case 'linear':
-            builder = ElasticNetBuilder()
+            builder = ElasticNetBuilder(MergedVariableGroups)
         case 'rf':
-            builder = RandomForestBuilder()
+            builder = RandomForestBuilder(MergedVariableGroups)
         case 'xgb':
-            builder = XGBoostBuilder()
+            builder = XGBoostBuilder(MergedVariableGroups)
 
     model_name = builder.model_name
     model_type = builder.model_type

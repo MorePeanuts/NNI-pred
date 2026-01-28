@@ -54,7 +54,7 @@ SOIL_ANNUAL_VARS = [
 SOIL_CATEGORICAL_VARS = ['landuse']
 
 
-class VariableGroups:
+class MergedVariableGroups:
     metadata = [
         'ID',  # Sample ID
         'Lon',  # Longitude
@@ -154,6 +154,20 @@ class VariableGroups:
             + cls.group_socio
         )
 
+    @classmethod
+    def get_numerical_feature_cols(cls):
+        return (
+            cls.soil_parent
+            + cls.soil_metabolites
+            + cls.group_natural
+            + cls.group_agro
+            + cls.group_socio
+        )
+
+    @classmethod
+    def get_natural_feature_cols(cls):
+        return cls.group_natural + cls.soil_parent + cls.soil_metabolites
+
 
 class SoilVariableGroups:
     metadata = [
@@ -225,6 +239,14 @@ class SoilVariableGroups:
     @classmethod
     def get_feature_cols(cls):
         return cls.categorical + cls.group_natural + cls.group_agro + cls.group_socio
+
+    @classmethod
+    def get_numerical_feature_cols(cls):
+        return cls.group_natural + cls.group_agro + cls.group_socio
+
+    @classmethod
+    def get_natural_feature_cols(cls):
+        return cls.group_natural
 
 
 class SoilTabularDataset:
@@ -340,11 +362,11 @@ class MergedTabularDataset:
             Tuple of (X, y_dict, groups)
         """
         # Extract targets
-        target_cols = VariableGroups.targets_parent + VariableGroups.targets_metabolites
+        target_cols = MergedVariableGroups.targets_parent + MergedVariableGroups.targets_metabolites
         y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
 
         # Extract metadata columns
-        metadata_cols = VariableGroups.metadata
+        metadata_cols = MergedVariableGroups.metadata
 
         # Features = all columns except targets and metadata
         exclude_cols = list(y_dict.keys()) + metadata_cols
@@ -356,26 +378,26 @@ class MergedTabularDataset:
     def _validate_features(self):
         assert isinstance(self.df, pd.DataFrame)
 
-        for col in VariableGroups.categorical:
+        for col in MergedVariableGroups.categorical:
             assert col in self.df.columns
 
-        for col in VariableGroups.targets_parent:
+        for col in MergedVariableGroups.targets_parent:
             assert col in self.df.columns
 
-        for col in VariableGroups.targets_metabolites:
+        for col in MergedVariableGroups.targets_metabolites:
             assert col in self.df.columns
 
-        for col in VariableGroups.soil_parent:
+        for col in MergedVariableGroups.soil_parent:
             assert col in self.df.columns
 
-        for col in VariableGroups.soil_metabolites:
+        for col in MergedVariableGroups.soil_metabolites:
             assert col in self.df.columns
 
-        for col in VariableGroups.group_natural:
+        for col in MergedVariableGroups.group_natural:
             assert col in self.df.columns
 
-        for col in VariableGroups.group_agro:
+        for col in MergedVariableGroups.group_agro:
             assert col in self.df.columns
 
-        for col in VariableGroups.group_socio:
+        for col in MergedVariableGroups.group_socio:
             assert col in self.df.columns

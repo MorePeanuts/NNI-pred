@@ -4,6 +4,8 @@ This script defines several candidate model constructors and a hyperparameter gr
 Candidate models include linear models, random forests, and XGBoost.
 """
 
+from nni_pred.data import MergedVariableGroups, SoilVariableGroups
+
 import pickle
 import pandas as pd
 import numpy as np
@@ -23,8 +25,9 @@ class ElasticNetBuilder:
     model_name = 'Elastic Net'
     model_type = 'linear'
 
-    def __init__(self):
+    def __init__(self, var_cls: type[MergedVariableGroups | SoilVariableGroups]):
         super().__init__()
+        self.var_cls = var_cls
 
     def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
         match scale:
@@ -48,7 +51,9 @@ class ElasticNetBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
+        feature_engineering = get_preprocessing_pipeline(
+            self.model_type, random_state=random_state, var_cls=self.var_cls
+        )
         regressor = TransformedTargetRegressor(
             ElasticNet(random_state=random_state),
             transformer=TargetTransformer(0),
@@ -63,10 +68,12 @@ class RandomForestBuilder:
 
     def __init__(
         self,
+        var_cls: type[MergedVariableGroups | SoilVariableGroups],
         n_jobs: int = -1,
         **kwargs,
     ):
         self.n_jobs = n_jobs
+        self.var_cls = var_cls
 
     def get_default_param_grid(self, scale: Literal['small', 'medium', 'large']):
         match scale:
@@ -96,7 +103,9 @@ class RandomForestBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
+        feature_engineering = get_preprocessing_pipeline(
+            self.model_type, random_state=random_state, var_cls=self.var_cls
+        )
         regressor = TransformedTargetRegressor(
             RandomForestRegressor(random_state=random_state, n_jobs=self.n_jobs),
             transformer=TargetTransformer(0),
@@ -111,10 +120,12 @@ class XGBoostBuilder:
 
     def __init__(
         self,
+        var_cls: type[MergedVariableGroups | SoilVariableGroups],
         objective='reg:tweedie',
         tree_method='hist',
         **kwargs,
     ):
+        self.var_cls = var_cls
         self.objective = objective
         self.tree_method = tree_method
 
@@ -155,7 +166,9 @@ class XGBoostBuilder:
                 }
 
     def get_regressor(self, random_state: int = 42):
-        feature_engineering = get_preprocessing_pipeline(self.model_type, random_state=random_state)
+        feature_engineering = get_preprocessing_pipeline(
+            self.model_type, random_state=random_state, var_cls=self.var_cls
+        )
         regressor = TransformedTargetRegressor(
             XGBRegressor(
                 # objective=self.objective,

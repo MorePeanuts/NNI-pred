@@ -13,7 +13,7 @@ from sklearn.compose import TransformedTargetRegressor, ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder, OrdinalEncoder
 from sklearn.decomposition import PCA
-from .data import VariableGroups
+from .data import MergedVariableGroups, SoilVariableGroups
 
 
 warnings.filterwarnings('ignore')
@@ -45,20 +45,22 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         self,
         variance_threshold: float = 0.95,
         random_state: int = 42,
+        var_cls: type[MergedVariableGroups | SoilVariableGroups] = MergedVariableGroups,
     ):
         self.variance_threshold = variance_threshold
         self.random_state = random_state
+        self.var_cls = var_cls
 
     def fit(self, X: pd.DataFrame, y=None):
         # Group agro: Scale + PCA
-        group2_cols = VariableGroups.group_agro
+        group2_cols = self.var_cls.group_agro
         self.group2_scaler_ = StandardScaler()
         X_group2 = self.group2_scaler_.fit_transform(X[group2_cols])
         self.group2_pca_ = PCA(n_components=self.variance_threshold, random_state=self.random_state)
         self.group2_pca_.fit(X_group2)
 
         # Group socio: Scale + PCA
-        group3_cols = VariableGroups.group_socio
+        group3_cols = self.var_cls.group_socio
         self.group3_scaler_ = StandardScaler()
         X_group3 = self.group3_scaler_.fit_transform(X[group3_cols])
         self.group3_pca_ = PCA(n_components=self.variance_threshold, random_state=self.random_state)
@@ -68,7 +70,7 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         # Group agro: Scale + PCA
-        group2_cols = VariableGroups.group_agro
+        group2_cols = self.var_cls.group_agro
         X_group2 = self.group2_scaler_.transform(X[group2_cols])
         X_group2 = self.group2_pca_.transform(X_group2)
         # n_comp2 = X_group2.shape[1]
@@ -79,7 +81,7 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         # )
 
         # Group socio: Scale + PCA
-        group3_cols = VariableGroups.group_socio
+        group3_cols = self.var_cls.group_socio
         X_group3 = self.group3_scaler_.transform(X[group3_cols])
         X_group3 = self.group3_pca_.transform(X_group3)
         # n_comp3 = X_group3.shape[1]
@@ -96,7 +98,7 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         return pd.DataFrame(X_combined, columns=cols, index=X.index)  # type: ignore
 
     def get_feature_cols(self):
-        return VariableGroups.group_agro + VariableGroups.group_socio
+        return self.var_cls.group_agro + self.var_cls.group_socio
 
     def get_feature_names_out(self, input_features=None):
         return np.array(
@@ -121,19 +123,17 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
 
 
 class SkewnessTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, skewness_threshold: float = 0.75):
+    def __init__(
+        self,
+        skewness_threshold: float = 0.75,
+        var_cls: type[MergedVariableGroups | SoilVariableGroups] = MergedVariableGroups,
+    ):
         self.skewness_threshold = skewness_threshold
+        self.var_cls = var_cls
 
     def fit(self, X: pd.DataFrame, y=None):
         self.continuous_cols = [
-            col
-            for col in X.columns
-            if col
-            in VariableGroups.group_agro
-            + VariableGroups.group_natural
-            + VariableGroups.group_socio
-            + VariableGroups.soil_metabolites
-            + VariableGroups.soil_parent
+            col for col in X.columns if col in self.var_cls.get_numerical_feature_cols()
         ]
 
         # Calculate skewness on training data
@@ -179,18 +179,12 @@ def get_preprocessing_pipeline(
     # WARNING: Whether to use target to control input features
     target: str | None = None,
     random_state: int = 42,
+    var_cls: type[MergedVariableGroups | SoilVariableGroups] = MergedVariableGroups,
 ) -> Pipeline:
-    features = (
-        VariableGroups.categorical
-        + VariableGroups.soil_parent
-        + VariableGroups.soil_metabolites
-        + VariableGroups.group_natural
-        + VariableGroups.group_agro
-        + VariableGroups.group_socio
-    )
+    features = var_cls.get_feature_cols()
     match model_type:
         case 'rf' | 'xgb':
-            pca = GroupedPCA(random_state=random_state)
+            pca = GroupedPCA(random_state=random_state, var_cls=var_cls)
             keeper = ColumnTransformer(
                 transformers=[
                     ('keep', 'passthrough', features),
@@ -200,7 +194,7 @@ def get_preprocessing_pipeline(
             )
             column_transformer = ColumnTransformer(
                 transformers=[
-                    ('encoder', OrdinalEncoder(), VariableGroups.categorical),
+                    ('encoder', OrdinalEncoder(), var_cls.categorical),
                     ('pca', pca, pca.get_feature_cols()),
                 ],
                 remainder='passthrough',
@@ -219,24 +213,22 @@ def get_preprocessing_pipeline(
                     (
                         'encoder',
                         OneHotEncoder(handle_unknown='ignore', sparse_output=False, drop='first'),
-                        VariableGroups.categorical,
+                        var_cls.categorical,
                     )
                 ],
                 remainder='passthrough',
                 verbose_feature_names_out=False,
             )
-            skew_shift = SkewnessTransformer()
+            skew_shift = SkewnessTransformer(var_cls=var_cls)
             group_natural_scaler = StandardScaler()
-            pca = GroupedPCA(random_state=random_state)
+            pca = GroupedPCA(random_state=random_state, var_cls=var_cls)
             column_transformer = ColumnTransformer(
                 transformers=[
                     ('pca', pca, pca.get_feature_cols()),
                     (
                         'group_natural_scaler',
                         group_natural_scaler,
-                        VariableGroups.group_natural
-                        + VariableGroups.soil_parent
-                        + VariableGroups.soil_metabolites,
+                        var_cls.get_natural_feature_cols(),
                     ),
                 ],
                 remainder='passthrough',

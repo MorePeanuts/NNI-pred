@@ -16,7 +16,12 @@ from typing import Literal
 from datetime import datetime
 from sklearn.metrics import r2_score, make_scorer
 from sklearn.model_selection import GroupKFold, GridSearchCV
-from nni_pred.data import MergedTabularDataset
+from nni_pred.data import (
+    MergedTabularDataset,
+    MergedVariableGroups,
+    SoilVariableGroups,
+    SoilTabularDataset,
+)
 from nni_pred.evaluation import Metrics, Evaluator, Comparator, OOFMetrics
 from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuilder
 
@@ -24,6 +29,7 @@ from nni_pred.models import RandomForestBuilder, XGBoostBuilder, ElasticNetBuild
 class Trainer:
     def __init__(
         self,
+        var_cls: type[MergedVariableGroups | SoilVariableGroups],
         dataset=None,
         scoring=None,
         outer_k_fold: int = 5,
@@ -45,7 +51,10 @@ class Trainer:
         logger.add(self.log_path, level='TRACE')
 
         if dataset is None:
-            self.dataset = MergedTabularDataset()
+            if var_cls is MergedVariableGroups:
+                self.dataset = MergedTabularDataset()
+            elif var_cls is SoilVariableGroups:
+                self.dataset = SoilTabularDataset()
         else:
             assert hasattr(dataset, 'prepare_data')
             self.dataset = dataset
@@ -59,9 +68,9 @@ class Trainer:
         self.inner_k_fold = inner_k_fold
 
         self.model_builder = {
-            'linear': ElasticNetBuilder(),
-            'rf': RandomForestBuilder(),
-            'xgb': XGBoostBuilder(),
+            'linear': ElasticNetBuilder(var_cls=var_cls),
+            'rf': RandomForestBuilder(var_cls=var_cls),
+            'xgb': XGBoostBuilder(var_cls=var_cls),
         }
 
     def train(

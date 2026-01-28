@@ -1,11 +1,11 @@
-from nni_pred.data import MergedTabularDataset
+from nni_pred.data import MergedTabularDataset, SoilVariableGroups
 import json
 import pandas as pd
 from pathlib import Path
 from typing import Literal
 from dataclasses import dataclass
 from nni_pred.evaluation import OOFMetrics
-from nni_pred.data import VariableGroups
+from nni_pred.data import MergedVariableGroups
 
 
 @dataclass
@@ -35,7 +35,12 @@ class Explorer:
         elif base_path.name.startswith('inf') or etype == 'inf':
             self.etype = 'inf'
 
-        self.init_seed = int(self.base_path.name.split('_')[1])
+        if 'merged' in base_path.name:
+            self.var_cls = MergedVariableGroups
+        elif 'soil' in base_path.name:
+            self.var_cls = SoilVariableGroups
+
+        self.init_seed = int(self.base_path.name.split('_')[2])
 
         self.targets = []
         self.details: dict[str, Details] = {}
@@ -57,14 +62,7 @@ class Explorer:
                     best_model_path = Path(
                         path / f'seed_{best_seed}/{best_model_type}_model_for_{target}.joblib'
                     )
-                    features = (
-                        VariableGroups.categorical
-                        + VariableGroups.soil_parent
-                        + VariableGroups.soil_metabolites
-                        + VariableGroups.group_natural
-                        + VariableGroups.group_agro
-                        + VariableGroups.group_socio
-                    )
+                    features = self.var_cls.get_feature_cols()
                     features = oof_metrics.oof_predictions[features]
                     self.details[target] = Details(
                         best_seed,
