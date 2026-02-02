@@ -4,8 +4,9 @@ import pandas as pd
 from loguru import logger
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from nni_pred.trainer import SeedSelector
+from nni_pred.trainer import Trainer
 from nni_pred.evaluation import Comparator, OOFMetrics
+from nni_pred.data import MergedVariableGroups, SoilVariableGroups
 
 
 def main():
@@ -39,6 +40,15 @@ def main():
             row.update(best_metrics.to_format_dict())
             rows.append(row)
 
+        # Final train
+        trainer = Trainer(var_cls, output_path=exp_path, param_size=args.size)
+        trainer.train(
+            row['target'],
+            model_type=row['model'],  # type: ignore
+            random_state=row['seed'],  # type: ignore
+            run_nested_cv=False,
+        )
+
     (exp_path / 'metrics_summary.csv').unlink(missing_ok=True)
     if len(rows) > 0:
         metrics_summary = pd.DataFrame(rows)
@@ -56,7 +66,14 @@ if __name__ == '__main__':
     parser.add_argument('--cv-threshold', default=0.8, type=float)
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--indicator', default='NSE_log', type=str)
+    parser.add_argument('--size', default='medium', choices=['small', 'medium', 'large'])
+    parser.add_argument('--cls', choices=['merged', 'soil'], type=str, default='merged')
     args = parser.parse_args()
+    match args.cls:
+        case 'merged':
+            var_cls = MergedVariableGroups
+        case 'soil':
+            var_cls = SoilVariableGroups
     exp_path = Path(args.exp_path)
     assert exp_path.exists(), f'{exp_path} doesnot exist.'
     main()

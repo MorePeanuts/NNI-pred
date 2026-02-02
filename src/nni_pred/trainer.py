@@ -231,7 +231,7 @@ class SeedSelector:
                 f'Best seed: {best_seed}\tBest model type: {best_model_type} {best_metrics}'
             )
 
-            # Fianl train
+            # Final train
             self.trainer.train(
                 target, model_type=best_model_type, random_state=best_seed, run_nested_cv=False
             )
