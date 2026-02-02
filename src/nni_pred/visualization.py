@@ -97,8 +97,10 @@ class Visualizer:
 
         fig, axes = plt.subplots(*figshape, figsize=figsize)
         for i, metrics in enumerate(metrics_used):
-            if figshape[0] > 1:
+            if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
+            elif figshape[0] == 1 and figshape[1] == 1:
+                ax = axes
             else:
                 ax = axes[i]
             bar = ax.barh(y_pos, df_mean[metrics], alpha=0.7, edgecolor='black')
@@ -200,10 +202,12 @@ class Visualizer:
 
         is_first = True
         for i, (target, (_, oof_metrics)) in enumerate(data.items()):
-            if figshape[0] > 1:
+            if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
-            else:
+            elif figshape[0] == 1 and figshape[1] == 1:
                 ax = axes
+            else:
+                ax = axes[i]
             predictions = oof_metrics.oof_predictions
             r2 = oof_metrics.oof.NSE_log
             y_true = predictions[f'log_{target}'] if use_log else predictions[target]
@@ -269,10 +273,12 @@ class Visualizer:
                     shap_values.pop(target)
 
         for i, (target, sp_values) in enumerate(shap_values.items()):
-            if figshape[0] > 1:
+            if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
-            else:
+            elif figshape[0] == 1 and figshape[1] == 1:
                 ax = axes
+            else:
+                ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False)
@@ -310,10 +316,12 @@ class Visualizer:
                     shap_values.pop(target)
 
         for i, (target, sp_values) in enumerate(shap_values.items()):
-            if figshape[0] > 1:
+            if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
-            else:
+            elif figshape[0] == 1 and figshape[1] == 1:
                 ax = axes
+            else:
+                ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
             shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False)
