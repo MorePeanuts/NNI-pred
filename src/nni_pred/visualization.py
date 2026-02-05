@@ -31,9 +31,9 @@ class Visualizer:
         self.features = {}
         for target in self.targets.copy():
             model_type = self.explorer.get_best_model_type(target)
-            if model_type == 'linear':
-                self.targets.remove(target)
-                continue
+            # if model_type == 'linear':
+            #     self.targets.remove(target)
+            #     continue
 
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
             features = self.explorer.get_features(target)
