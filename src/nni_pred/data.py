@@ -187,6 +187,7 @@ class SoilVariableGroups:
     ]
     targets_metabolites = [
         'IMI-UREA',  # Imidacloprid-urea
+        'DM-CLO',  # Desmethyl-clothianidin
         'DN-IMI',  # Desmethyl-imidacloprid
         'CLO-UREA',  # Clothianidin-urea
         'mNNIs',  # Sum of metabolites

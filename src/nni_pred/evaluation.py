@@ -37,6 +37,8 @@ def get_threshold(target) -> float:
             return 0.0609111832840862
         case 'mNNIs':
             return 0.405979293082156
+        case 'DM-CLO':
+            return 0.060811183
         case _:
             raise ValueError(f'Unknown target {target}')
 
