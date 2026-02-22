@@ -17,14 +17,21 @@ class Visualizer:
     def __init__(
         self,
         exp_root: Path,
+        targets: list[str] | None = None,
         use_shap: bool = True,
     ):
         self.exp_root = exp_root
         self.explorer = Explorer(exp_root)
-        self.targets = self.explorer.get_targets_list()
+        if targets:
+            self.targets = targets
+        else:
+            self.targets = self.explorer.get_targets_list()
 
         if use_shap:
             self._init_shap_values()
+
+    def reset_targets(self, targets: list[str]):
+        self.targets = targets
 
     def _init_shap_values(self):
         self.shap_values = {}
