@@ -427,6 +427,8 @@ class Comparator:
             mt = re.search(r'^oof_metrics_of_(.+)\.json$', oof_metrics_path.name)
             if mt:
                 model_type = mt.group(1)
+                if model_type == 'linear':
+                    continue
             else:
                 raise RuntimeError(f'model type doesnot found in {oof_metrics_path.name}')
             with oof_metrics_path.open() as f:

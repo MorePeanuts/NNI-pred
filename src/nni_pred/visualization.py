@@ -230,20 +230,22 @@ class Visualizer:
                     alpha=0.6,
                     edgecolors='black',
                     linewidth=0.3,
-                    s=30,
+                    s=40,
                 )
 
             max_val = max(y_true.max(), y_pred.max())
             min_val = min(y_true.min(), y_pred.min())
             ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1.5, alpha=0.5)
 
-            ax.set_title(f'{target}\n(R²={r2:.3f}, (log))', fontsize=11, fontweight='bold')
-            ax.set_xlabel('Measured', fontsize=10)
-            ax.set_ylabel('Predicted', fontsize=10)
+            ax.set_title(f'{target}\n(R²={r2:.3f}, (log))', fontsize=16, fontweight='bold')
+            ax.set_xlabel('Measured', fontsize=16)
+            ax.set_ylabel('Predicted', fontsize=16)
+            ax.tick_params(axis='both', which='major', labelsize=16)
             ax.grid(alpha=0.3, linestyle='--')
+            ax.set_aspect('equal', adjustable='box')
 
             if is_first:
-                ax.legend(loc='best', fontsize=8)
+                ax.legend(loc='best', fontsize=16)
 
             is_first = False
 
@@ -353,7 +355,7 @@ class Visualizer:
 
     def _create_subplots_shape_and_figsize(self, total_plots: int) -> tuple:
         if total_plots == 1:
-            return (1, 1), (5, 8)
+            return (1, 1), (8, 8)
         elif total_plots == 2:
             return (1, 2), (8, 15)
         elif total_plots == 3:
