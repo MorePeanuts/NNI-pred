@@ -37,11 +37,6 @@ class Visualizer:
         self.shap_values = {}
         self.features = {}
         for target in self.targets.copy():
-            model_type = self.explorer.get_best_model_type(target)
-            # if model_type == 'linear':
-            #     self.targets.remove(target)
-            #     continue
-
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
             features = self.explorer.get_features(target)
             cat_cols = self.explorer.var_cls.categorical
@@ -148,21 +143,12 @@ class Visualizer:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
 
-    def plot_pca_loading(
+    def plot_model_comparison(
         self,
         output_suffix: str | None = None,
     ):
         output_path = (
-            self.exp_root / f'pca_loading{"_" + output_suffix if output_suffix else ""}.png'
-        )
-
-    def plot_model_performance_box(
-        self,
-        output_suffix: str | None = None,
-    ):
-        output_path = (
-            self.exp_root
-            / f'model_performance_box{"_" + output_suffix if output_suffix else ""}.png'
+            self.exp_root / f'model_comparison{"_" + output_suffix if output_suffix else ""}.png'
         )
 
     def plot_scatter_identity(

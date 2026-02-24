@@ -98,3 +98,18 @@ class Explorer:
 
     def get_features(self, target) -> pd.DataFrame:
         return self.details[target].features
+
+    def get_data_for_visualization(self, model: Literal['linear', 'xgb', 'rf', 'best']):
+        data = {}
+        if model == 'best':
+            for target in self.targets:
+                data[target] = (self.get_best_model_type(target), self.get_oof_metrics(target))
+        else:
+            for target in self.targets:
+                best_seed = self.details[target].best_seed
+                path = self.base_path / target / f'seed_{best_seed}/oof_metrics_of_{model}.json'
+                with path.open() as f:
+                    json_obj = json.load(f)
+                oof_metrics = OOFMetrics.from_json(json_obj)
+                data[target] = (model, oof_metrics)
+        return data
