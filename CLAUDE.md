@@ -24,6 +24,13 @@ uv run scripts/train_all.py --cls merged  # or --cls soil
 uv run scripts/train_simplest.py xgb --size small --targets THIA
 ```
 
+### Visualization
+
+```bash
+# Generate plots from experiment results (metrics bar chart, scatter plots, SHAP)
+uv run scripts/visualize.py output/exp_soil_666_260129_112639
+```
+
 ### Key Arguments
 - `--size`: Hyperparameter grid size (`small`, `medium`, `large`)
 - `--targets`: Pollutant targets (e.g., `THIA IMI CLO` or `all`)
@@ -46,6 +53,14 @@ uv run scripts/train_simplest.py xgb --size small --targets THIA
 - **transformers.py**: Feature engineering pipelines. `GroupedPCA` applies separate PCA to agro and socio feature groups. `TargetTransformer` applies log transform with offset. `SkewnessTransformer` handles high-skew features for linear models.
 
 - **visualization.py**: `Visualizer` generates metrics bar charts, measured vs predicted plots, and SHAP analysis plots.
+
+- **utils.py**: `Explorer` class for navigating experiment output directories and retrieving models/features.
+
+### Dataset Files
+
+Default dataset locations (relative to project root):
+- `datasets/merged_data.csv` - Water samples with IDW-aggregated soil features
+- `datasets/soil_data.csv` - Soil-only samples
 
 ### Data Flow
 
@@ -75,3 +90,17 @@ output/exp_{cls}_{seed}_{timestamp}/
 - **PBIAS**: Percent Bias
 - **KGE**: Kling-Gupta Efficiency
 - Detection-based variants (e.g., `NSE_detected`) computed only on samples above detection threshold
+
+### Metric Thresholds (from `docs/metrics.md`)
+
+| Metric | Very Good | Good | Satisfactory | Unsatisfactory |
+|--------|-----------|------|--------------|----------------|
+| NSE/KGE | >0.7 | 0.55-0.7 | 0.4-0.55 | <0.4 |
+| RSR | 0-0.5 | 0.5-0.6 | 0.6-0.7 | >0.7 |
+| PBIAS | <±25% | ±25%-±40% | ±40%-±70% | >±70% |
+
+## Target Pollutants
+
+**Soil targets**: THIA, IMI, CLO, parentNNIs (parents); IMI-UREA, DM-CLO, DN-IMI, CLO-UREA, mNNIs (metabolites)
+
+**Water targets**: THIA, IMI, CLO, ACE, DIN, parentNNIs (parents); IMI-UREA, DN-IMI, DM-ACE, CLO-UREA, mNNIs (metabolites)
