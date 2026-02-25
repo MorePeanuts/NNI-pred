@@ -156,7 +156,7 @@ class Visualizer:
 
     def plot_model_comparison(
         self,
-        metric: str = 'NSE_log',
+        metrics: list[str] | str = 'NSE_log',
         targets_used: Iterable[str] | None = None,
         output_suffix: str | None = None,
     ):
@@ -164,10 +164,16 @@ class Visualizer:
         Plot model comparison for all three models under the best seed.
 
         Args:
-            metric: Metric to compare (default: 'NSE_log')
+            metrics: Metric(s) to compare. Can be a single metric string or a list of metrics.
+                     Default: 'NSE_log'. Example: ['NSE_log', 'RSR_log', 'PBIAS']
+                     Each metric generates a separate bar chart image file.
             targets_used: Targets to plot (default: all targets)
             output_suffix: Suffix for output filename
         """
+        # Normalize metrics to list
+        if isinstance(metrics, str):
+            metrics = [metrics]
+
         model_types = ['linear', 'rf', 'xgb']
         model_names = {'linear': 'Elastic Net', 'rf': 'Random Forest', 'xgb': 'XGBoost'}
         model_colors = {'linear': '#3498db', 'rf': '#2ecc71', 'xgb': '#e74c3c'}
@@ -180,11 +186,12 @@ class Visualizer:
 
         targets = list(targets_used) if targets_used else self.targets
 
-        # Part 1: Grouped bar chart for metric comparison
-        self._plot_model_comparison_bar(
-            model_data, targets, metric, model_types, model_names, model_colors,
-            best_highlight_color, output_suffix
-        )
+        # Part 1: Grouped bar chart for each metric (one image per metric)
+        for metric in metrics:
+            self._plot_model_comparison_bar(
+                model_data, targets, metric, model_types, model_names, model_colors,
+                best_highlight_color, output_suffix
+            )
 
         # Part 2: Scatter plots for each target (3 subplots per target)
         for target in targets:
@@ -205,9 +212,10 @@ class Visualizer:
         output_suffix: str | None = None,
     ):
         """Plot grouped bar chart comparing models across targets."""
-        output_path = (
-            self.exp_root / f'model_comparison_bar{"_" + output_suffix if output_suffix else ""}.png'
-        )
+        suffix_parts = [metric]
+        if output_suffix:
+            suffix_parts.append(output_suffix)
+        output_path = self.exp_root / f'model_comparison_bar_{"_".join(suffix_parts)}.png'
 
         n_targets = len(targets)
         bar_width = 0.25
