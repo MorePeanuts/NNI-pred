@@ -532,7 +532,7 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
-            shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False)
+            shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False, max_display=10)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Dot Summary Plot',
@@ -575,7 +575,7 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
-            shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False)
+            shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False, max_display=10)
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Importance Plot',
