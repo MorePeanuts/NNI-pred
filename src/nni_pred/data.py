@@ -92,29 +92,32 @@ class MergedVariableGroups:
     ]
 
     @classmethod
-    def get_feature_cols(cls):
-        return (
-            cls.categorical
-            + cls.soil_parent
-            + cls.soil_metabolites
-            + cls.group_natural
-            + cls.group_agro
-            + cls.group_socio
-        )
+    def get_feature_cols(cls, target: str):
+        all_features = cls.group_natural + cls.group_agro + cls.group_socio
+        match target:
+            case 'THIA':
+                all_features.extend(['Soil_THIA_agg'])
+            case 'IMI':
+                all_features.extend(['Soil_IMI_agg'])
+            case 'CLO':
+                all_features.extend(['Soil_CLO_agg', 'Soil_THIA_agg'])
+            case 'IMI-UREA':
+                all_features.extend(['Soil_IMI-UREA_agg', 'IMI'])
+            case 'DN-IMI':
+                all_features.extend(['Soil_DN-IMI_agg', 'IMI'])
+            case 'DM-ACE':
+                all_features.extend(['ACE'])
+            case 'CLO-UREA':
+                all_features.extend(['Soil_CLO-UREA_agg', 'CLO', 'THIA'])
+        return all_features
 
     @classmethod
-    def get_numerical_feature_cols(cls):
-        return (
-            cls.soil_parent
-            + cls.soil_metabolites
-            + cls.group_natural
-            + cls.group_agro
-            + cls.group_socio
-        )
+    def get_numerical_feature_cols(cls, target: str):
+        return cls.get_feature_cols(target)
 
     @classmethod
     def get_natural_feature_cols(cls):
-        return cls.group_natural + cls.soil_parent + cls.soil_metabolites
+        return cls.group_natural
 
 
 class SoilVariableGroups:
@@ -189,12 +192,22 @@ class SoilVariableGroups:
     ]
 
     @classmethod
-    def get_feature_cols(cls):
-        return cls.categorical + cls.group_natural + cls.group_agro + cls.group_socio
+    def get_feature_cols(cls, target):
+        all_features = cls.group_natural + cls.group_agro + cls.group_socio
+        match target:
+            case 'IMI-UREA':
+                all_features.extend(['IMI'])
+            case 'DN-IMI':
+                all_features.extend(['IMI'])
+            case 'CLO-UREA':
+                all_features.extend(['CLO', 'THIA'])
+            case 'DM-CLO':
+                all_features.extend(['CLO', 'THIA'])
+        return all_features
 
     @classmethod
-    def get_numerical_feature_cols(cls):
-        return cls.group_natural + cls.group_agro + cls.group_socio
+    def get_numerical_feature_cols(cls, target):
+        return cls.get_feature_cols(target)
 
     @classmethod
     def get_natural_feature_cols(cls):
@@ -233,20 +246,24 @@ class SoilTabularDataset:
 
         return groups
 
-    def prepare_data(self) -> tuple[pd.DataFrame, dict[str, pd.Series], np.ndarray]:
+    def prepare_data(self, target: str) -> tuple[pd.DataFrame, pd.Series, np.ndarray]:
         # Extract targets
         target_cols = SoilVariableGroups.targets_parent + SoilVariableGroups.targets_metabolites
-        y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
-
-        # Extract metadata columns
-        metadata_cols = SoilVariableGroups.metadata
-
-        # Features = all columns except targets and metadata
-        exclude_cols = list(y_dict.keys()) + metadata_cols
-        feature_cols = [c for c in self.df.columns if c not in exclude_cols]
+        assert target in target_cols
+        y = self.df[target]
+        # y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
+        #
+        # # Extract metadata columns
+        # metadata_cols = SoilVariableGroups.metadata
+        #
+        # # Features = all columns except targets and metadata
+        # exclude_cols = list(y_dict.keys()) + metadata_cols
+        # feature_cols = [c for c in self.df.columns if c not in exclude_cols]
+        feature_cols = SoilVariableGroups.get_feature_cols(target)
+        assert all([col in self.df for col in feature_cols])
         X = self.df[feature_cols]
 
-        return X, y_dict, self.groups
+        return X, y, self.groups
 
     def _validate_features(self):
         assert isinstance(self.df, pd.DataFrame)
@@ -303,7 +320,7 @@ class MergedTabularDataset:
 
         return groups
 
-    def prepare_data(self) -> tuple[pd.DataFrame, dict[str, pd.Series], np.ndarray]:
+    def prepare_data(self, target: str) -> tuple[pd.DataFrame, pd.Series, np.ndarray]:
         """
         Prepare features, targets, and spatial groups.
 
@@ -315,17 +332,21 @@ class MergedTabularDataset:
         """
         # Extract targets
         target_cols = MergedVariableGroups.targets_parent + MergedVariableGroups.targets_metabolites
-        y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
+        assert target in target_cols
+        y = self.df[target]
+        # y_dict = {col: self.df[col] for col in target_cols if col in self.df.columns}
 
         # Extract metadata columns
-        metadata_cols = MergedVariableGroups.metadata
+        # metadata_cols = MergedVariableGroups.metadata
 
         # Features = all columns except targets and metadata
-        exclude_cols = list(y_dict.keys()) + metadata_cols
-        feature_cols = [c for c in self.df.columns if c not in exclude_cols]
+        # exclude_cols = list(y_dict.keys()) + metadata_cols
+        # feature_cols = [c for c in self.df.columns if c not in exclude_cols]
+        feature_cols = MergedVariableGroups.get_feature_cols(target)
+        assert all([col in self.df for col in feature_cols])
         X = self.df[feature_cols]
 
-        return X, y_dict, self.groups
+        return X, y, self.groups
 
     def _validate_features(self):
         assert isinstance(self.df, pd.DataFrame)

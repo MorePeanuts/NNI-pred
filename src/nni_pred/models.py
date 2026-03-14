@@ -50,9 +50,9 @@ class ElasticNetBuilder:
                     'max_iter': [10000],
                 }
 
-    def get_regressor(self, random_state: int = 42):
+    def get_regressor(self, target: str, random_state: int = 42):
         feature_engineering = get_preprocessing_pipeline(
-            self.model_type, random_state=random_state, var_cls=self.var_cls
+            self.model_type, target, random_state=random_state, var_cls=self.var_cls
         )
         regressor = TransformedTargetRegressor(
             ElasticNet(random_state=random_state),
@@ -102,9 +102,9 @@ class RandomForestBuilder:
                     'max_features': ['sqrt', 'log2'],
                 }
 
-    def get_regressor(self, random_state: int = 42):
+    def get_regressor(self, target, random_state: int = 42):
         feature_engineering = get_preprocessing_pipeline(
-            self.model_type, random_state=random_state, var_cls=self.var_cls
+            self.model_type, target, random_state=random_state, var_cls=self.var_cls
         )
         regressor = TransformedTargetRegressor(
             RandomForestRegressor(random_state=random_state, n_jobs=self.n_jobs),
@@ -165,9 +165,9 @@ class XGBoostBuilder:
                     'tweedie_variance_power': [1.2, 1.5, 1.8],
                 }
 
-    def get_regressor(self, random_state: int = 42):
+    def get_regressor(self, target, random_state: int = 42):
         feature_engineering = get_preprocessing_pipeline(
-            self.model_type, random_state=random_state, var_cls=self.var_cls
+            self.model_type, target, random_state=random_state, var_cls=self.var_cls
         )
         regressor = TransformedTargetRegressor(
             XGBRegressor(

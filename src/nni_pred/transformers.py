@@ -76,7 +76,7 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         # n_comp2 = X_group2.shape[1]
         # X_group2_df = pd.DataFrame(
         #     X_group2,
-        #     columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],  # type: ignore
+        #     columns=[f'PC_Agro_{i + 1}' for i in range(n_comp2)],
         #     index=X.index,
         # )
 
@@ -87,7 +87,7 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
         # n_comp3 = X_group3.shape[1]
         # X_group3_df = pd.DataFrame(
         #     X_group3,
-        #     columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],  # type: ignore
+        #     columns=[f'PC_Socio_{i + 1}' for i in range(n_comp3)],
         #     index=X.index,
         # )
         X_combined = np.hstack([X_group2, X_group3])
@@ -125,15 +125,17 @@ class GroupedPCA(BaseEstimator, TransformerMixin):
 class SkewnessTransformer(BaseEstimator, TransformerMixin):
     def __init__(
         self,
+        target: str,
         skewness_threshold: float = 0.75,
         var_cls: type[MergedVariableGroups | SoilVariableGroups] = MergedVariableGroups,
     ):
         self.skewness_threshold = skewness_threshold
         self.var_cls = var_cls
+        self.target = target
 
     def fit(self, X: pd.DataFrame, y=None):
         self.continuous_cols = [
-            col for col in X.columns if col in self.var_cls.get_numerical_feature_cols()
+            col for col in X.columns if col in self.var_cls.get_numerical_feature_cols(self.target)
         ]
 
         # Calculate skewness on training data
@@ -142,6 +144,8 @@ class SkewnessTransformer(BaseEstimator, TransformerMixin):
         self.min_shifts_ = {}
 
         for col in self.continuous_cols:
+            if col not in X:
+                continue
             skew_val = stats.skew(X[col].dropna())
             self.skewness_dict_[col] = skew_val
 
@@ -177,11 +181,11 @@ class SkewnessTransformer(BaseEstimator, TransformerMixin):
 def get_preprocessing_pipeline(
     model_type: Literal['linear', 'rf', 'xgb'],
     # WARNING: Whether to use target to control input features
-    target: str | None = None,
+    target: str,
     random_state: int = 42,
     var_cls: type[MergedVariableGroups | SoilVariableGroups] = MergedVariableGroups,
 ) -> Pipeline:
-    features = var_cls.get_feature_cols()
+    features = var_cls.get_feature_cols(target)
     match model_type:
         case 'rf' | 'xgb':
             pca = GroupedPCA(random_state=random_state, var_cls=var_cls)
@@ -194,7 +198,7 @@ def get_preprocessing_pipeline(
             )
             column_transformer = ColumnTransformer(
                 transformers=[
-                    ('encoder', OrdinalEncoder(), var_cls.categorical),
+                    # ('encoder', OrdinalEncoder(), var_cls.categorical),
                     ('pca', pca, pca.get_feature_cols()),
                 ],
                 remainder='passthrough',
@@ -208,18 +212,18 @@ def get_preprocessing_pipeline(
                 remainder='drop',
                 verbose_feature_names_out=False,
             )
-            encoder = ColumnTransformer(
-                transformers=[
-                    (
-                        'encoder',
-                        OneHotEncoder(handle_unknown='ignore', sparse_output=False, drop='first'),
-                        var_cls.categorical,
-                    )
-                ],
-                remainder='passthrough',
-                verbose_feature_names_out=False,
-            )
-            skew_shift = SkewnessTransformer(var_cls=var_cls)
+            # encoder = ColumnTransformer(
+            #     transformers=[
+            #         (
+            #             'encoder',
+            #             OneHotEncoder(handle_unknown='ignore', sparse_output=False, drop='first'),
+            #             var_cls.categorical,
+            #         )
+            #     ],
+            #     remainder='passthrough',
+            #     verbose_feature_names_out=False,
+            # )
+            skew_shift = SkewnessTransformer(target, var_cls=var_cls)
             group_natural_scaler = StandardScaler()
             pca = GroupedPCA(random_state=random_state, var_cls=var_cls)
             column_transformer = ColumnTransformer(
@@ -237,7 +241,7 @@ def get_preprocessing_pipeline(
             return Pipeline(
                 [
                     ('keeper', keeper),
-                    ('encoder', encoder),
+                    # ('encoder', encoder),
                     ('skew_shift', skew_shift),
                     ('column_transformer', column_transformer),
                 ]

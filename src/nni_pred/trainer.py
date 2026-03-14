@@ -86,8 +86,7 @@ class Trainer:
         else:
             model_list = [model_type]
 
-        X, y_dict, groups = self.dataset.prepare_data()
-        y = y_dict[target]
+        X, y, groups = self.dataset.prepare_data(target)
 
         for model_tp in model_list:
             if run_nested_cv:
@@ -126,7 +125,7 @@ class Trainer:
             test_y = y.iloc[test_idx]
             train_groups = groups[train_val_idx]
 
-            pipeline = model_builder.get_regressor(random_state)
+            pipeline = model_builder.get_regressor(target, random_state)
 
             inner_cv = GroupKFold(self.inner_k_fold, shuffle=True, random_state=random_state)
             grid_search = GridSearchCV(
@@ -171,7 +170,7 @@ class Trainer:
         param_grid = {f'model__regressor__{k}': v for k, v in param_grid.items()}
 
         logger.info(f'(Seed={random_state}) Training {model_name} for {target} on all data...')
-        pipeline = model_builder.get_regressor(random_state)
+        pipeline = model_builder.get_regressor(target, random_state)
 
         final_cv = GroupKFold(self.outer_k_fold, shuffle=True, random_state=random_state)
         final_grid_search = GridSearchCV(
