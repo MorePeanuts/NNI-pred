@@ -9,56 +9,16 @@ from pathlib import Path
 from dataclasses import dataclass
 
 
-SOIL_POLLUTANTS = [
-    'THIA',
-    'IMI',
-    'CLO',
-    'parentNNIs',
-    'IMI-UREA',
-    'DN-IMI',
-    'CLO-UREA',
-    'mNNIs',
-]
-SOIL_SEASONAL_VARS = ['pH', 'TN', 'TOC', 'Temp', 'Rain', 'EVI', 'FCOVER', 'LAI', 'LST', 'NDVI']
-SOIL_ANNUAL_VARS = [
-    'Alt',
-    'CC',
-    'BD',
-    'GPAM',
-    'WS',
-    'FER',
-    'PES',
-    'MC',
-    'MCP',
-    'VE',
-    'VEP',
-    'FR',
-    'FRP',
-    'FERA',
-    'PESA',
-    'UR',
-    'GAO',
-    'PR',
-    'SR',
-    'TR',
-    'GDP per capita',
-    'UI',
-    'RI',
-    'UR_W',
-    'RU_W',
-    'IRR_W',
-    'AGR_W',
-    'IND_W',
-    'LIF_W',
-]
-SOIL_CATEGORICAL_VARS = ['landuse']
-
-
 class MergedVariableGroups:
     metadata = [
         'ID',  # Sample ID
         'Lon',  # Longitude
         'Lat',  # Latitude
+        'parentNNIs',  # Sum of parent neonicotinoids
+        'mNNIs',  # Sum of metabolites
+        'Soil_parentNNIs_agg',
+        'Soil_mNNIs_agg',
+        'Alt',
     ]
     categorical = [
         'Season',  # Season (Dry, Normal, Rainy)
@@ -71,26 +31,22 @@ class MergedVariableGroups:
         'CLO',  # Clothianidin
         'ACE',  # Acetamiprid
         'DIN',  # Dinotefuran
-        'parentNNIs',  # Sum of parent neonicotinoids
     ]
     targets_metabolites = [
         'IMI-UREA',  # Imidacloprid-urea
         'DN-IMI',  # Desmethyl-imidacloprid
         'DM-ACE',  # Desmethyl-acetamiprid
         'CLO-UREA',  # Clothianidin-urea
-        'mNNIs',  # Sum of metabolites
     ]
     soil_parent = [
         'Soil_THIA_agg',
         'Soil_IMI_agg',
         'Soil_CLO_agg',
-        'Soil_parentNNIs_agg',
     ]
     soil_metabolites = [
         'Soil_IMI-UREA_agg',
         'Soil_DN-IMI_agg',
         'Soil_CLO-UREA_agg',
-        'Soil_mNNIs_agg',
     ]
     group_natural = [
         'PREC',  # Water body precipitation
@@ -100,47 +56,39 @@ class MergedVariableGroups:
         'pH',  # pH
         'COND',  # Conductivity
         'DOC',  # Dissolved organic carbon
-        # WARNING: Whether to use altitude as a feature
-        # 'Alt',  # Altitude (water body)
     ]
     group_agro = [
+        'GPAM',
+        'WS',
         'FER',  # Fertilizer usage (water body location)
-        'FERPER',  # Fertilizer per unit area
         'PES',  # Pesticide usage
-        'PESPER',  # Pesticide per unit area
-        'AMP',  # Agricultural machinery power
+        'MO',  # Corn output
+        'CO',
+        'VE',
+        'FR',
+        'FERA',  # Fertilizer per unit area
+        'PESA',  # Pesticide per unit area
         'TSA',  # Total sown area
-        'FCA',  # Food crop area
         'WA',  # Wheat area
         'CA',  # Corn area
         'VEGA',  # Vegetable area
-        'ARCA',  # Additional crop area
-        'CROPOUT',  # Grain crop output
-        'WO',  # Wheat output
-        'CO',  # Corn output
-        'VO',  # Vegetable output
-        'FOP',  # Fruit output
-        'AGR_W',  # Agricultural water usage
         'IRR_W',  # Irrigation water usage
+        'AGR_W',  # Agricultural water usage
     ]
     group_socio = [
-        'GDP',  # Gross Domestic Product
-        'OP_FI',  # First industry output
-        'OP_SE',  # Second industry output
-        'OP_TH',  # Third industry output
-        'AO',  # Agricultural output
-        'FO',  # Forestry output
-        'Urban',  # Urbanization rate
-        'POP_TOT',  # Total population
+        'UR',  # Urbanization rate
+        'GAO',
         'PR',  # Primary industry ratio
         'SR',  # Secondary industry ratio
         'TR',  # Tertiary industry ratio
+        'GDP',  # Gross Domestic Product
         'UI',  # Urban resident income
         'RI',  # Rural resident income
         'UR_W',  # Urban residential water usage
         'RU_W',  # Rural residential water usage
         'IND_W',  # Industrial water usage
         'LIF_W',  # Total residential water usage
+        'POP_TOT',  # Total population
     ]
 
     @classmethod
@@ -174,6 +122,8 @@ class SoilVariableGroups:
         'ID',  # Sample ID
         'Lon',  # Longitude
         'Lat',  # Latitude
+        'parentNNIs',  # Sum of parent neonicotinoids
+        'mNNIs',  # Sum of metabolites
     ]
     categorical = [
         'Season',  # Season (Dry, Normal, Rainy)
@@ -183,14 +133,12 @@ class SoilVariableGroups:
         'THIA',  # Thiamethoxam
         'IMI',  # Imidacloprid
         'CLO',  # Clothianidin
-        'parentNNIs',  # Sum of parent neonicotinoids
     ]
     targets_metabolites = [
         'IMI-UREA',  # Imidacloprid-urea
         'DM-CLO',  # Desmethyl-clothianidin
         'DN-IMI',  # Desmethyl-imidacloprid
         'CLO-UREA',  # Clothianidin-urea
-        'mNNIs',  # Sum of metabolites
     ]
     group_natural = [
         'pH',
@@ -209,32 +157,35 @@ class SoilVariableGroups:
     group_agro = [
         'GPAM',
         'WS',
-        'FER',
-        'PES',
-        'MC',
-        'MCP',
+        'FER',  # Fertilizer usage (water body location)
+        'PES',  # Pesticide usage
+        'MO',  # Corn output
+        'CO',
         'VE',
-        'VEP',
         'FR',
-        'FRP',
-        'FERA',
-        'PESA',
+        'FERA',  # Fertilizer per unit area
+        'PESA',  # Pesticide per unit area
+        'TSA',  # Total sown area
+        'WA',  # Wheat area
+        'CA',  # Corn area
+        'VEGA',  # Vegetable area
+        'IRR_W',  # Irrigation water usage
+        'AGR_W',  # Agricultural water usage
     ]
     group_socio = [
-        'UR',
+        'UR',  # Urbanization rate
         'GAO',
-        'PR',
-        'SR',
-        'TR',
-        'GDP per capita',
-        'UI',
-        'RI',
-        'UR_W',
-        'RU_W',
-        'IRR_W',
-        'AGR_W',
-        'IND_W',
-        'LIF_W',
+        'PR',  # Primary industry ratio
+        'SR',  # Secondary industry ratio
+        'TR',  # Tertiary industry ratio
+        'GDP',  # Gross Domestic Product
+        'UI',  # Urban resident income
+        'RI',  # Rural resident income
+        'UR_W',  # Urban residential water usage
+        'RU_W',  # Rural residential water usage
+        'IND_W',  # Industrial water usage
+        'LIF_W',  # Total residential water usage
+        'POP_TOT',  # Total population
     ]
 
     @classmethod

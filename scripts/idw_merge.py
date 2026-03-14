@@ -11,12 +11,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from pathlib import Path
-from nni_pred.data import (
-    SOIL_ANNUAL_VARS,
-    SOIL_POLLUTANTS,
-    SOIL_SEASONAL_VARS,
-    SOIL_CATEGORICAL_VARS,
-)
+from nni_pred.data import MergedVariableGroups
 
 
 def haversine_distance(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
@@ -141,24 +136,6 @@ def aggregate_soil_features_idw(
     return features
 
 
-def get_nearest_categorical(neighbors: pd.DataFrame, distances: np.ndarray) -> dict:
-    """
-    Get the landuse category from the nearest soil sample
-
-    Args:
-        neighbors: Soil samples within radius
-        distances: Distances to these samples
-
-    Returns:
-        A dict of categorical values from the nearest sample
-    """
-    nearest_idx = np.argmin(distances)
-    res = {}
-    for field in SOIL_CATEGORICAL_VARS:
-        res['Soil_' + field] = neighbors.iloc[nearest_idx][field]
-    return res
-
-
 def merge_water_soil_samples(
     soil_df: pd.DataFrame, water_df: pd.DataFrame, radius_km: float = 30.0
 ):
@@ -166,12 +143,9 @@ def merge_water_soil_samples(
     logger.info(f'Soil data shape: {soil_df.shape}')
     logger.info(f'Water data shape: {water_df.shape}')
 
-    soil_numerical_vars = SOIL_POLLUTANTS + SOIL_SEASONAL_VARS + SOIL_ANNUAL_VARS
+    need_merge_vars = MergedVariableGroups.targets_metabolites + MergedVariableGroups.targets_parent
 
-    logger.info(f'\nSoil numerical variables to aggregate: {len(soil_numerical_vars)}')
-    logger.info(f'  - Pollutants: {len(SOIL_POLLUTANTS)}')
-    logger.info(f'  - Seasonal variables: {len(SOIL_SEASONAL_VARS)}')
-    logger.info(f'  - Annual variables: {len(SOIL_ANNUAL_VARS)}')
+    logger.info(f'\nSoil numerical variables to aggregate: {len(need_merge_vars)}')
 
     # Process each water sample
     merged_rows = []
@@ -189,13 +163,8 @@ def merge_water_soil_samples(
         merged_row = water_row.to_dict()
 
         # Aggregate soil numerical features using IDW2
-        idw_features = aggregate_soil_features_idw(neighbors, distances, soil_numerical_vars)
+        idw_features = aggregate_soil_features_idw(neighbors, distances, need_merge_vars)
         merged_row.update(idw_features)
-
-        # Get categorical feature from nearest neighbor
-        categorical_vars = get_nearest_categorical(neighbors, distances)
-        for k, v in categorical_vars.items():
-            merged_row[k] = v
 
         merged_rows.append(merged_row)
 
@@ -203,8 +172,8 @@ def merge_water_soil_samples(
     merged_df = pd.DataFrame(merged_rows)
 
     logger.info(f'Successfully merged: {len(merged_rows)} water samples')
-    logger.info(f'Total soil features added: {len(soil_numerical_vars) + 1}')
-    logger.info(f'  - Aggregated numerical (Soil_XXX_agg): {len(soil_numerical_vars)}')
+    logger.info(f'Total soil features added: {len(need_merge_vars) + 1}')
+    logger.info(f'  - Aggregated numerical (Soil_XXX_agg): {len(need_merge_vars)}')
     logger.info('  - Categorical (Soil_landuse): 1')
 
     return merged_df
