@@ -13,5 +13,7 @@ datasets
 output/**/*
 !output/**/
 !output/**/*.png
+!output/**/*shap_summary.csv
+!output/**/*shap_values.csv
 **/.DS_Store
 temp/

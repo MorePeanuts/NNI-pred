@@ -630,6 +630,63 @@ class Visualizer:
             self.exp_root / f'shap_dependence{"_" + output_suffix if output_suffix else ""}.png'
         )
 
+    def save_shap_values_to_csv(
+        self,
+        targets_used: Iterable[str] | None = None,
+        output_suffix: str | None = None,
+    ):
+        """
+        Save SHAP values to CSV files.
+
+        For each target, two CSV files are saved:
+        - {target}_shap_values.csv: Contains SHAP values for each feature and sample
+        - {target}_shap_summary.csv: Contains mean absolute SHAP values (feature importance)
+
+        Args:
+            targets_used: Targets to save (default: all targets)
+            output_suffix: Suffix for output directory
+        """
+        targets = list(targets_used) if targets_used else self.targets
+
+        for target in targets:
+            if target not in self.shap_values:
+                continue
+
+            shap_val = self.shap_values[target]
+            features = self.explorer.get_features(target)
+
+            # Save SHAP values with original data
+            shap_df = pd.DataFrame(shap_val.values, columns=[f'{col}_shap' for col in features.columns])
+            data_df = pd.DataFrame(shap_val.data, columns=features.columns)
+            combined_df = pd.concat([data_df, shap_df], axis=1)
+
+            # Add base value and prediction if available
+            if hasattr(shap_val, 'base_values'):
+                if shap_val.base_values.ndim > 0:
+                    combined_df['base_value'] = shap_val.base_values
+                else:
+                    combined_df['base_value'] = shap_val.base_values
+
+            values_path = (
+                self.exp_root / target / f'{target}_shap_values{"_" + output_suffix if output_suffix else ""}.csv'
+            )
+            combined_df.to_csv(values_path, index=False)
+
+            # Save summary (mean absolute SHAP values)
+            shap_abs_mean = np.abs(shap_val.values).mean(axis=0)
+            summary_df = pd.DataFrame({
+                'feature': features.columns,
+                'mean_abs_shap': shap_abs_mean,
+                'mean_shap': shap_val.values.mean(axis=0),
+                'std_shap': shap_val.values.std(axis=0),
+            })
+            summary_df = summary_df.sort_values('mean_abs_shap', ascending=False).reset_index(drop=True)
+
+            summary_path = (
+                self.exp_root / target / f'{target}_shap_summary{"_" + output_suffix if output_suffix else ""}.csv'
+            )
+            summary_df.to_csv(summary_path, index=False)
+
     def _create_subplots_shape_and_figsize(self, total_plots: int) -> tuple:
         if total_plots == 1:
             return (1, 1), (8, 8)
