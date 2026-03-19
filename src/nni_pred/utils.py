@@ -62,7 +62,7 @@ class Explorer:
                     best_model_path = Path(
                         path / f'seed_{best_seed}/{best_model_type}_model_for_{target}.joblib'
                     )
-                    features = self.var_cls.get_feature_cols()
+                    features = self.var_cls.get_feature_cols(target)
                     features = oof_metrics.oof_predictions[features]
                     self.details[target] = Details(
                         best_seed,

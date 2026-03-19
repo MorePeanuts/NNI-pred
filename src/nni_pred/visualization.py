@@ -47,20 +47,20 @@ class Visualizer:
             # Calculate SHAP values
             pipeline = joblib.load(self.explorer.get_best_model_path(target))
             features = self.explorer.get_features(target)
-            cat_cols = self.explorer.var_cls.categorical
-            mappings = {col: list(features[col].unique()) for col in cat_cols}
-            features_numeric = features.copy()
-            for col in cat_cols:
-                features_numeric[col] = features[col].map(lambda x: mappings[col].index(x))
+            # cat_cols = self.explorer.var_cls.categorical
+            # mappings = {col: list(features[col].unique()) for col in cat_cols}
+            # features_numeric = features.copy()
+            # for col in cat_cols:
+            #     features_numeric[col] = features[col].map(lambda x: mappings[col].index(x))
 
             def model_predict(data):
                 df = pd.DataFrame(data, columns=features.columns)
-                for col in cat_cols:
-                    df[col] = df[col].apply(lambda x: mappings[col][int(round(float(x)))])
+                # for col in cat_cols:
+                #     df[col] = df[col].apply(lambda x: mappings[col][int(round(float(x)))])
                 return pipeline.predict(df)
 
-            explainer = shap.Explainer(model_predict, features_numeric)
-            sh_val = explainer(features_numeric)
+            explainer = shap.Explainer(model_predict, features)
+            sh_val = explainer(features)
             sh_val.data = features.values
             self.shap_values[target] = sh_val
 
@@ -189,15 +189,26 @@ class Visualizer:
         # Part 1: Grouped bar chart for each metric (one image per metric)
         for metric in metrics:
             self._plot_model_comparison_bar(
-                model_data, targets, metric, model_types, model_names, model_colors,
-                best_highlight_color, output_suffix
+                model_data,
+                targets,
+                metric,
+                model_types,
+                model_names,
+                model_colors,
+                best_highlight_color,
+                output_suffix,
             )
 
         # Part 2: Scatter plots for each target (3 subplots per target)
         for target in targets:
             self._plot_model_comparison_scatter(
-                model_data, target, model_types, model_names, model_colors,
-                best_highlight_color, output_suffix
+                model_data,
+                target,
+                model_types,
+                model_names,
+                model_colors,
+                best_highlight_color,
+                output_suffix,
             )
 
     def _plot_model_comparison_bar(
@@ -262,7 +273,9 @@ class Visualizer:
             )
 
             # Collect bar info
-            for j, (bar, val, std, err_plot) in enumerate(zip(bars, values, errors, errors_to_plot, strict=False)):
+            for j, (bar, val, std, err_plot) in enumerate(
+                zip(bars, values, errors, errors_to_plot, strict=False)
+            ):
                 if j not in all_bar_data:
                     all_bar_data[j] = []
                 bar_top = max(val, 0) + err_plot
@@ -340,11 +353,11 @@ class Visualizer:
 
         trans = TargetTransformer(0)
         best_mt = self.explorer.get_best_model_type(target)
-        season_colors = {
-            'Dry': '#e74c3c',
-            'Normal': '#f39c12',
-            'Rainy': '#3498db',
-        }
+        # season_colors = {
+        #     'Dry': '#e74c3c',
+        #     'Normal': '#f39c12',
+        #     'Rainy': '#3498db',
+        # }
 
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
@@ -362,19 +375,28 @@ class Visualizer:
             r2 = oof_metrics.oof.NSE_log
 
             # Plot by season
-            is_first = (i == 0)
-            for season, color in season_colors.items():
-                preds = predictions[predictions['Season'] == season]
-                ax.scatter(
-                    preds[f'log_{target}'],
-                    preds[f'log_{target}_pred'],
-                    c=color,
-                    label=season if is_first else '',
-                    alpha=0.6,
-                    edgecolors='black',
-                    linewidth=0.3,
-                    s=40,
-                )
+            # is_first = i == 0
+            # for season, color in season_colors.items():
+            #     preds = predictions[predictions['Season'] == season]
+            #     ax.scatter(
+            #         preds[f'log_{target}'],
+            #         preds[f'log_{target}_pred'],
+            #         c=color,
+            #         label=season if is_first else '',
+            #         alpha=0.6,
+            #         edgecolors='black',
+            #         linewidth=0.3,
+            #         s=40,
+            #     )
+            ax.scatter(
+                y_true,
+                y_pred,
+                c='#e74c3c',
+                alpha=0.6,
+                edgecolors='black',
+                linewidth=0.3,
+                s=40,
+            )
 
             # Identity line
             max_val = max(y_true.max(), y_pred.max())
@@ -395,7 +417,7 @@ class Visualizer:
             ax.set_aspect('equal', adjustable='box')
 
         # Add legend to first subplot
-        axes[0].legend(loc='best', fontsize=10)
+        # axes[0].legend(loc='best', fontsize=10)
 
         fig.suptitle(
             f'Model Comparison for {target} (Measured vs Predicted)',
@@ -443,13 +465,13 @@ class Visualizer:
         total_plots = len(data)
         figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
         fig, axes = plt.subplots(*figshape, figsize=figsize)
-        season_colors = {
-            'Dry': '#e74c3c',  # Red
-            'Normal': '#f39c12',  # Orange
-            'Rainy': '#3498db',  # Blue
-        }
-
-        is_first = True
+        # season_colors = {
+        #     'Dry': '#e74c3c',  # Red
+        #     'Normal': '#f39c12',  # Orange
+        #     'Rainy': '#3498db',  # Blue
+        # }
+        #
+        # is_first = True
         for i, (target, (_, oof_metrics)) in enumerate(data.items()):
             if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
@@ -462,18 +484,27 @@ class Visualizer:
             y_true = predictions[f'log_{target}'] if use_log else predictions[target]
             y_pred = predictions[f'log_{target}_pred'] if use_log else predictions[f'{target}_pred']
 
-            for season, color in season_colors.items():
-                preds = predictions[predictions['Season'] == season]
-                ax.scatter(
-                    preds[f'log_{target}'] if use_log else preds[target],
-                    preds[f'log_{target}_pred'] if use_log else preds[f'{target}_pred'],
-                    c=color,
-                    label=season if is_first else '',
-                    alpha=0.6,
-                    edgecolors='black',
-                    linewidth=0.3,
-                    s=40,
-                )
+            # for season, color in season_colors.items():
+            #     preds = predictions[predictions['Season'] == season]
+            #     ax.scatter(
+            #         preds[f'log_{target}'] if use_log else preds[target],
+            #         preds[f'log_{target}_pred'] if use_log else preds[f'{target}_pred'],
+            #         c=color,
+            #         label=season if is_first else '',
+            #         alpha=0.6,
+            #         edgecolors='black',
+            #         linewidth=0.3,
+            #         s=40,
+            #     )
+            ax.scatter(
+                y_true,
+                y_pred,
+                c='#e74c3c',
+                alpha=0.6,
+                edgecolors='black',
+                linewidth=0.3,
+                s=40,
+            )
 
             max_val = max(y_true.max(), y_pred.max())
             min_val = min(y_true.min(), y_pred.min())
@@ -486,10 +517,10 @@ class Visualizer:
             ax.grid(alpha=0.3, linestyle='--')
             ax.set_aspect('equal', adjustable='box')
 
-            if is_first:
-                ax.legend(loc='best', fontsize=16)
-
-            is_first = False
+            # if is_first:
+            #     ax.legend(loc='best', fontsize=16)
+            #
+            # is_first = False
 
         fig.suptitle(
             'Measured vs Predicted (Out-of-Fold)',
@@ -532,7 +563,9 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
-            shap.summary_plot(sp_values, features, features.columns, plot_type='dot', show=False, max_display=10)
+            shap.summary_plot(
+                sp_values, features, features.columns, plot_type='dot', show=False, max_display=10
+            )
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Dot Summary Plot',
@@ -575,7 +608,9 @@ class Visualizer:
                 ax = axes[i]
             plt.sca(ax)
             features = self.explorer.get_features(target)
-            shap.summary_plot(sp_values, features, features.columns, plot_type='bar', show=False, max_display=10)
+            shap.summary_plot(
+                sp_values, features, features.columns, plot_type='bar', show=False, max_display=10
+            )
             ax.set_title(f'{target}', fontsize=13, fontweight='bold')
         plt.suptitle(
             'SHAP Importance Plot',
