@@ -465,13 +465,15 @@ class Visualizer:
         total_plots = len(data)
         figshape, figsize = self._create_subplots_shape_and_figsize(total_plots)
         fig, axes = plt.subplots(*figshape, figsize=figsize)
-        # season_colors = {
-        #     'Dry': '#e74c3c',  # Red
-        #     'Normal': '#f39c12',  # Orange
-        #     'Rainy': '#3498db',  # Blue
-        # }
-        #
-        # is_first = True
+
+        # Define factor ranges and colors (mutually exclusive for plotting)
+        factor_colors = {
+            '0-2x': '#27ae60',  # Green - within 2x
+            '2-5x': '#f39c12',  # Orange - 2-5x
+            '5-10x': '#e74c3c',  # Red - 5-10x
+            '>10x': '#95a5a6',  # Gray - outside 10x
+        }
+
         for i, (target, (_, oof_metrics)) in enumerate(data.items()):
             if figshape[0] > 1 and figshape[1] > 1:
                 ax = axes[i // figshape[1]][i % figshape[1]]
@@ -484,43 +486,70 @@ class Visualizer:
             y_true = predictions[f'log_{target}'] if use_log else predictions[target]
             y_pred = predictions[f'log_{target}_pred'] if use_log else predictions[f'{target}_pred']
 
-            # for season, color in season_colors.items():
-            #     preds = predictions[predictions['Season'] == season]
-            #     ax.scatter(
-            #         preds[f'log_{target}'] if use_log else preds[target],
-            #         preds[f'log_{target}_pred'] if use_log else preds[f'{target}_pred'],
-            #         c=color,
-            #         label=season if is_first else '',
-            #         alpha=0.6,
-            #         edgecolors='black',
-            #         linewidth=0.3,
-            #         s=40,
-            #     )
-            ax.scatter(
-                y_true,
-                y_pred,
-                c='#e74c3c',
-                alpha=0.6,
-                edgecolors='black',
-                linewidth=0.3,
-                s=40,
-            )
+            # For log-transformed data, we need to exponentiate first to calculate factors
+            if use_log:
+                y_true_orig = trans.inverse_transform(y_true)
+                y_pred_orig = trans.inverse_transform(y_pred)
+            else:
+                y_true_orig = y_true
+                y_pred_orig = y_pred
 
+            # Calculate factor ratios (avoid division by zero)
+            ratio = np.where(
+                y_true_orig > 0, y_pred_orig / y_true_orig, np.where(y_pred_orig > 0, np.inf, 1.0)
+            )
+            ratio_abs = np.abs(ratio)
+
+            # Classify points into mutually exclusive ranges for plotting
+            mask_0_2 = ratio_abs <= 2.0
+            mask_2_5 = (ratio_abs > 2.0) & (ratio_abs <= 5.0)
+            mask_5_10 = (ratio_abs > 5.0) & (ratio_abs <= 10.0)
+            mask_10_plus = ratio_abs > 10.0
+
+            # Plot each group with different colors
+            is_first = i == 0
+            for mask, label, color in [
+                (mask_0_2, '0-2×', factor_colors['0-2x']),
+                (mask_2_5, '2-5×', factor_colors['2-5x']),
+                (mask_5_10, '5-10×', factor_colors['5-10x']),
+                (mask_10_plus, '>10×', factor_colors['>10x']),
+            ]:
+                if np.any(mask):
+                    ax.scatter(
+                        y_true[mask],
+                        y_pred[mask],
+                        c=color,
+                        label=label if is_first else '',
+                        alpha=0.6,
+                        edgecolors='black',
+                        linewidth=0.3,
+                        s=40,
+                    )
+
+            # Plot identity line only
             max_val = max(y_true.max(), y_pred.max())
             min_val = min(y_true.min(), y_pred.min())
             ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1.5, alpha=0.5)
 
-            ax.set_title(f'{target}\n(R²={r2:.3f}, (log))', fontsize=16, fontweight='bold')
+            # Calculate cumulative percentages for title
+            n_total = len(y_true)
+            p_f2 = np.sum(ratio_abs <= 2.0) / n_total * 100
+            p_f5 = np.sum(ratio_abs <= 5.0) / n_total * 100
+            p_f10 = np.sum(ratio_abs <= 10.0) / n_total * 100
+
+            ax.set_title(
+                f'{target}\n(R²={r2:.3f}, F2={p_f2:.1f}%, F5={p_f5:.1f}%, F10={p_f10:.1f}%)',
+                fontsize=16,
+                fontweight='bold',
+            )
             ax.set_xlabel('Measured', fontsize=16)
             ax.set_ylabel('Predicted', fontsize=16)
             ax.tick_params(axis='both', which='major', labelsize=16)
             ax.grid(alpha=0.3, linestyle='--')
             ax.set_aspect('equal', adjustable='box')
 
-            # if is_first:
-            #     ax.legend(loc='best', fontsize=16)
-            #
-            # is_first = False
+            if is_first:
+                ax.legend(loc='best', fontsize=10)
 
         fig.suptitle(
             'Measured vs Predicted (Out-of-Fold)',
@@ -656,7 +685,9 @@ class Visualizer:
             features = self.explorer.get_features(target)
 
             # Save SHAP values with original data
-            shap_df = pd.DataFrame(shap_val.values, columns=[f'{col}_shap' for col in features.columns])
+            shap_df = pd.DataFrame(
+                shap_val.values, columns=[f'{col}_shap' for col in features.columns]
+            )
             data_df = pd.DataFrame(shap_val.data, columns=features.columns)
             combined_df = pd.concat([data_df, shap_df], axis=1)
 
@@ -668,22 +699,30 @@ class Visualizer:
                     combined_df['base_value'] = shap_val.base_values
 
             values_path = (
-                self.exp_root / target / f'{target}_shap_values{"_" + output_suffix if output_suffix else ""}.csv'
+                self.exp_root
+                / target
+                / f'{target}_shap_values{"_" + output_suffix if output_suffix else ""}.csv'
             )
             combined_df.to_csv(values_path, index=False)
 
             # Save summary (mean absolute SHAP values)
             shap_abs_mean = np.abs(shap_val.values).mean(axis=0)
-            summary_df = pd.DataFrame({
-                'feature': features.columns,
-                'mean_abs_shap': shap_abs_mean,
-                'mean_shap': shap_val.values.mean(axis=0),
-                'std_shap': shap_val.values.std(axis=0),
-            })
-            summary_df = summary_df.sort_values('mean_abs_shap', ascending=False).reset_index(drop=True)
+            summary_df = pd.DataFrame(
+                {
+                    'feature': features.columns,
+                    'mean_abs_shap': shap_abs_mean,
+                    'mean_shap': shap_val.values.mean(axis=0),
+                    'std_shap': shap_val.values.std(axis=0),
+                }
+            )
+            summary_df = summary_df.sort_values('mean_abs_shap', ascending=False).reset_index(
+                drop=True
+            )
 
             summary_path = (
-                self.exp_root / target / f'{target}_shap_summary{"_" + output_suffix if output_suffix else ""}.csv'
+                self.exp_root
+                / target
+                / f'{target}_shap_summary{"_" + output_suffix if output_suffix else ""}.csv'
             )
             summary_df.to_csv(summary_path, index=False)
 
